@@ -1,0 +1,1 @@
+- 由原项目 https://github.com/xxyz30/skyland-auto-sign 精简而来
