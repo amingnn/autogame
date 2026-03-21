@@ -10,6 +10,7 @@ tasks:
   skyland_sign:
     enabled: true
     interval_hours: 10       # 10小时内已运行则跳过
+    webhook_notify: true     # run() 结束后自行 POST /done 通知完成
 
   maa:
     enabled: true

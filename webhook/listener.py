@@ -46,6 +46,17 @@ def _refine_maa_message(payload: dict) -> str:
 def create_app(scheduler: "Scheduler") -> FastAPI:
     app = FastAPI(title="AutoGame Webhook")
 
+    @app.post("/done")
+    async def done(payload: dict = Body(...)):
+        """任务自报完成接口（供 run() 内部调用）。
+        请求体: {"task": "<task_name>"}
+        """
+        task_name = payload.get("task", "")
+        if not task_name:
+            return {"status": "error", "message": "缺少 task 字段"}
+        scheduler.mark_done(task_name)
+        return {"status": "ok", "task": task_name}
+
     @app.post("/trigger")
     async def trigger(payload: dict = Body(...)):
         """通用任务触发接口。

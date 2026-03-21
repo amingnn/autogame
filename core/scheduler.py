@@ -14,17 +14,21 @@ POLL_INTERVAL = 300  # 每 5 分钟检查一次
 class Scheduler:
     def __init__(self, config: Config) -> None:
         self.config = config
-        # 冷却记录：{task_name: ISO 8601 str}，持久化到 db_path
+        # 冷却记录：{task_name: ISO 8601 str}，持久化
         self._state: dict[str, str] = {}
-        # 本次会话完成标记：{task_name: bool}，内存级，重启清零
+        self._load_state()
+
+        # 本次会话完成标记：
+        #   需要运行 → False（等待完成）
+        #   不需运行（冷却未到）→ True（视为已完成，不阻塞关机）
         self._session_done: dict[str, bool] = {
-            name: False
+            name: not self._should_run_raw(name)
             for name, cfg in config.tasks.items()
             if cfg.enabled
         }
         self._shutdown_triggered = False
         self._start_time = datetime.now(tz=timezone.utc)
-        self._load_state()
+        self._log_initial_status()
 
     # ── 持久化（冷却时间） ────────────────────────────────────────────────────
 
@@ -48,23 +52,28 @@ class Scheduler:
 
     # ── 冷却校验 ────────────────────────────────────────────────────────────
 
-    def should_run(self, task_name: str) -> bool:
+    def _should_run_raw(self, task_name: str) -> bool:
+        """仅检查冷却，不校验 enabled。供初始化时调用。"""
         task_cfg = self.config.tasks.get(task_name)
-        if not task_cfg or not task_cfg.enabled:
+        if not task_cfg:
             return False
-
         last_str = self._state.get(task_name)
         if not last_str:
             return True
-
         try:
             last_run = datetime.fromisoformat(last_str)
         except ValueError:
             return True
-
-        now = datetime.now(tz=timezone.utc)
-        elapsed_hours = (now - last_run).total_seconds() / 3600
+        elapsed_hours = (
+            datetime.now(tz=timezone.utc) - last_run
+        ).total_seconds() / 3600
         return elapsed_hours >= task_cfg.interval_hours
+
+    def should_run(self, task_name: str) -> bool:
+        task_cfg = self.config.tasks.get(task_name)
+        if not task_cfg or not task_cfg.enabled:
+            return False
+        return self._should_run_raw(task_name)
 
     def _record_run(self, task_name: str) -> None:
         self._state[task_name] = datetime.now(tz=timezone.utc).isoformat()
@@ -72,28 +81,39 @@ class Scheduler:
 
     # ── 会话完成状态 ─────────────────────────────────────────────────────────
 
+    def _log_initial_status(self) -> None:
+        pending = [k for k, v in self._session_done.items() if not v]
+        skipped = [k for k, v in self._session_done.items() if v]
+        mlog.info(f"本次会话待完成任务: {pending}")
+        if skipped:
+            mlog.info(f"冷却中（跳过）: {skipped}")
+
     def mark_done(self, task_name: str) -> None:
-        """由 webhook 回调调用，标记任务本次会话已完成。"""
+        """由 webhook 回调或 run() 自报完成时调用。"""
         if task_name not in self._session_done:
-            mlog.warning(f"[{task_name}] mark_done 被调用，但该任务不在会话中")
+            mlog.warning(f"[{task_name}] mark_done 被调用，但该任务不在本次会话中")
             return
         if not self._session_done[task_name]:
             self._session_done[task_name] = True
-            mlog.info(f"[{task_name}] 已标记完成")
+            mlog.info(f"[{task_name}] ✓ 已完成")
+        self._log_progress()
         self._check_shutdown()
 
     def _log_progress(self) -> None:
         done = [k for k, v in self._session_done.items() if v]
+        pending = [k for k, v in self._session_done.items() if not v]
         total = len(self._session_done)
-        mlog.info(f"任务进度: {len(done)}/{total} 已完成 {done}")
+        mlog.info(
+            f"进度 {len(done)}/{total} | "
+            f"已完成: {done} | "
+            f"等待中: {pending}"
+        )
 
     def _check_shutdown(self) -> None:
-        """检查所有启用任务是否都已完成，若是则触发关机。"""
         if self._shutdown_triggered:
             return
         if not self.config.system.shutdown_on_complete:
             return
-        self._log_progress()
         if all(self._session_done.values()):
             mlog.info("所有任务均已完成！")
             self._trigger_shutdown()
@@ -123,14 +143,14 @@ class Scheduler:
         force=True 时跳过冷却校验。
         """
         if not force and not self.should_run(task_name):
-            mlog.debug(f"[{task_name}] 未达到触发间隔，跳过")
+            mlog.debug(f"[{task_name}] 冷却中，跳过")
             return False
 
         module_path = f"tasks.{task_name}.client"
         try:
             module = importlib.import_module(module_path)
-        except ModuleNotFoundError:
-            mlog.error(f"[{task_name}] 找不到模块: {module_path}")
+        except ModuleNotFoundError as e:
+            mlog.error(f"[{task_name}] 找不到模块 {module_path}: {e}")
             return False
 
         run_fn = getattr(module, "run", None)
@@ -146,23 +166,24 @@ class Scheduler:
             else:
                 await asyncio.to_thread(run_fn)
             elapsed = (datetime.now() - start).total_seconds()
-            mlog.info(f"[{task_name}] run() 结束，耗时 {elapsed:.1f}s")
+            mlog.info(f"[{task_name}] run() 返回，耗时 {elapsed:.1f}s")
             self._record_run(task_name)
-
-            # 非 webhook_notify 任务：run() 结束即视为完成
+            # webhook_notify=True 的任务由 POST /done 或 /maa 等回调标记完成
+            # webhook_notify=False 的任务在这里直接标记完成
             task_cfg = self.config.tasks[task_name]
             if not task_cfg.webhook_notify:
                 self.mark_done(task_name)
-
             return True
         except Exception as e:
             mlog.error(f"[{task_name}] 执行失败: {e}", exc_info=True)
+            # 失败也标记完成，避免永久阻塞关机
+            self.mark_done(task_name)
             return False
 
     # ── 轮询循环 ────────────────────────────────────────────────────────────
 
     async def poll_loop(self) -> None:
-        mlog.info("Scheduler 轮询已启动")
+        mlog.info("Scheduler 轮询已启动，等待任务触发或 Webhook 回调...")
         while True:
             # 超时保护
             if not self._shutdown_triggered:
@@ -170,10 +191,10 @@ class Scheduler:
                     datetime.now(tz=timezone.utc) - self._start_time
                 ).total_seconds() / 3600
                 if elapsed_hours >= self.config.system.shutdown_timeout_hours:
-                    done = [k for k, v in self._session_done.items() if v]
+                    pending = [k for k, v in self._session_done.items() if not v]
                     mlog.error(
-                        f"超时保护触发（运行超过 {self.config.system.shutdown_timeout_hours}h），"
-                        f"已完成任务: {done}"
+                        f"超时保护触发（已运行 {elapsed_hours:.1f}h），"
+                        f"仍未完成: {pending}"
                     )
                     self._trigger_shutdown()
 

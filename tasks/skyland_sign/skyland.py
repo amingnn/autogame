@@ -11,16 +11,17 @@ from urllib import parse
 
 import requests
 
-from skyland_sign.SecuritySm import get_d_id
-
 from pathlib import Path
 
+from .SecuritySm import get_d_id
 from core.logger import mlog, log_wrapper, time_wrapper
 
 def mlog_info(msg: str) -> None:
     mlog.info(msg)
 
-token_save_name = str(root / 'skyland_sign' / 'TOKEN.txt')
+# tasks/skyland_sign/ 目录
+_pkg_dir = Path(__file__).parent
+token_save_name = str(_pkg_dir / 'TOKEN.txt')
 app_code = '4ca99fa6b56cc2ba'
 token_env = os.environ.get('TOKEN')
 # 现在想做什么？
