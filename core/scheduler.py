@@ -6,7 +6,7 @@ import platform
 import sys
 from datetime import datetime, timezone
 from core.common import Config
-from core.logger import mlog, report, time_wrapper
+from core.logger import mlog, report
 
 
 class Scheduler:
@@ -191,8 +191,7 @@ class Scheduler:
                 if elapsed_hours >= self.config.system.shutdown_timeout_hours:
                     pending = [k for k, v in self._session_done.items() if not v]
                     report(
-                        f"{time_wrapper('监控超时，为安全起见准备关机')} "
-                        f"未完成: {pending}"
+                        f"监控超时，为安全起见准备关机，未完成: {pending}"
                     )
                     self._trigger_shutdown()
 

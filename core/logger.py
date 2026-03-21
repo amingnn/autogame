@@ -1,10 +1,12 @@
 import logging
 import logging.config
 import logging.handlers
+import threading
 import requests
-from datetime import datetime
 from core.common import cfg
 
+
+from datetime import datetime
 
 cfg.log_dir.mkdir(parents=True, exist_ok=True)
 log_file = cfg.log_dir / f"{datetime.now().strftime('%Y-%m-%d')}.log"
@@ -60,13 +62,16 @@ mlog: logging.Logger = init_app_logging()
 
 # ── 推送报告收集器 ─────────────────────────────────────────────────────────────
 # 只收集有业务含义的格式化内容（签到结果、MAA 日志、超时提示等）
+# 加锁保证 skyland 线程与 webhook 事件循环同时写入时顺序不乱
 _report: list[str] = []
+_report_lock = threading.Lock()
 
 
 def report(content: str) -> None:
-    """写入系统日志，同时追加到本次会话的推送报告中。"""
+    """写入系统日志，同时原子追加到本次会话的推送报告中。"""
     mlog.info(content)
-    _report.append(content)
+    with _report_lock:
+        _report.append(content)
 
 
 # ── 格式工具 ───────────────────────────────────────────────────────────────────
@@ -84,8 +89,7 @@ def push_wechat(send_key: str) -> None:
     if not _report:
         mlog.warning("推送内容为空，跳过")
         return
-    with open(log_file, mode="r", encoding="utf-8") as f:
-        content = f.read()
+    content = "\n\n".join(_report)
     url = f"https://sctapi.ftqq.com/{send_key}.send"
     headers = {"Content-Type": "application/json;charset=utf-8"}
     params = {"title": "自动化任务报告", "desp": content}

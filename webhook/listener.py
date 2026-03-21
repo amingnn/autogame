@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Body, Request
 
-from core.logger import mlog
+from core.logger import mlog, report, log_wrapper
 
 if TYPE_CHECKING:
     from core.scheduler import Scheduler
@@ -86,7 +86,7 @@ def create_app(scheduler: "Scheduler") -> FastAPI:
         if request.method == "GET":
             params = dict(request.query_params)
             log_msg = params.get("msg", "无")
-            report(log_wrapper(time_wrapper(log_msg), title="终末地自动化任务"))
+            report(log_wrapper(log_msg, title="终末地自动化任务"))
             scheduler.mark_done("maaend")
             return {"status": "ok"}
 

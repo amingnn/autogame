@@ -14,7 +14,7 @@ import requests
 from pathlib import Path
 
 from .SecuritySm import get_d_id
-from core.logger import mlog, report, log_wrapper, time_wrapper
+from core.logger import mlog, report, log_wrapper
 
 # tasks/skyland_sign/ 目录
 _pkg_dir = Path(__file__).parent
@@ -352,7 +352,6 @@ def start():
     for i in token:
         try:
             sign_success, logs_out = do_sign(get_cred_by_token(i))
-            logs_out = [time_wrapper(log) for log in logs_out]
             report(log_wrapper('\n'.join(logs_out), title="森空岛签到"))
             all_logs.extend(logs_out)
             if not sign_success:

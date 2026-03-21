@@ -217,3 +217,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 本地配置（包含密钥，不提交）
+config.yaml
+state.json
+logs/
