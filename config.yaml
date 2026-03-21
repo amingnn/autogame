@@ -1,0 +1,22 @@
+system:
+  log_level: "INFO"
+  webhook_port: 8080
+  shutdown_on_complete: true
+  shutdown_delay_seconds: 60
+  shutdown_timeout_hours: 1.0
+  server_chan_key: ""          # Server酱 SendKey，留空则不推送
+
+tasks:
+  skyland_sign:
+    enabled: true
+    interval_hours: 10       # 10小时内已运行则跳过
+
+  maa:
+    enabled: true
+    interval_hours: 1
+    webhook_notify: true     # 由 MAA 程序 POST /maa 通知完成
+
+  maaend:
+    enabled: true
+    interval_hours: 1
+    webhook_notify: true     # 由终末地程序 GET /maa 通知完成

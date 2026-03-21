@@ -13,12 +13,12 @@ import requests
 
 from skyland_sign.SecuritySm import get_d_id
 
-import sys
 from pathlib import Path
 
-root = Path(__file__).parents[1]
-sys.path.append(str(root))
-from tools import mlog_info, log_wrapper, time_wrapper
+from core.logger import mlog, log_wrapper, time_wrapper
+
+def mlog_info(msg: str) -> None:
+    mlog.info(msg)
 
 token_save_name = str(root / 'skyland_sign' / 'TOKEN.txt')
 app_code = '4ca99fa6b56cc2ba'
