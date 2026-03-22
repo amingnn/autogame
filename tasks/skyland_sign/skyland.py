@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
+sky_logger = logging.getLogger("skyland")
 import os.path
 import sys
 import threading
@@ -14,7 +15,7 @@ import requests
 from pathlib import Path
 
 from .SecuritySm import get_d_id
-from core.logger import mlog, report, log_wrapper
+from core.notify import report, notify_wrapper
 
 # tasks/skyland_sign/ 目录
 _pkg_dir = Path(__file__).parent
@@ -90,7 +91,7 @@ def generate_signature(path, body_or_query):
     s = path + body_or_query + t + header_ca_str
     hex_s = hmac.new(token, s.encode('utf-8'), hashlib.sha256).hexdigest()
     md5 = hashlib.md5(hex_s.encode('utf-8')).hexdigest().encode('utf-8').decode('utf-8')
-    logging.info(f'算出签名: {md5}')
+    sky_logger.info(f'算出签名: {md5}')
     return md5, header_ca
 
 
@@ -184,9 +185,9 @@ def get_binding_list():
     resp = requests.get(binding_url, headers=get_sign_header(binding_url, 'get', None, http_local.header)).json()
 
     if resp['code'] != 0:
-        logging.error(f"请求角色列表出现问题：{resp['message']}")
+        sky_logger.error(f"请求角色列表出现问题：{resp['message']}")
         if resp.get('message') == '用户未登录':
-            logging.error(f'用户登录可能失效了，请重新运行此程序！')
+            sky_logger.error(f'用户登录可能失效了，请重新运行此程序！')
             os.remove(token_save_name)
             return []
     for i in resp['data']['list']:
@@ -276,7 +277,7 @@ def do_sign(cred_resp):
             msg = sign_for_arknights(i)
         elif app_code == 'endfield':
             msg = sign_for_endfield(i)
-        logging.info(msg)
+        sky_logger.info(msg)
 
         logs_out.extend(msg)
 
@@ -286,7 +287,7 @@ def do_sign(cred_resp):
 def save(token):
     with open(token_save_name, 'w') as f:
         f.write(token)
-    logging.info(
+    sky_logger.info(
         f'您的鹰角网络通行证保存在{token_save_name}, 打开这个可以把它复制到云函数服务器上执行!\n双击添加账号即可再次添加账号')
 
 
@@ -308,20 +309,20 @@ def read_from_env():
         i = i.strip()
         if i and i not in v:
             v.append(parse_user_token(i))
-    logging.info(f'从环境变量中读取到{len(v)}个token...')
+    sky_logger.info(f'从环境变量中读取到{len(v)}个token...')
     return v
 
 
 def init_token():
     if token_env:
-        logging.info('使用环境变量里面的token')
+        sky_logger.info('使用环境变量里面的token')
         # 对于github action,不需要存储token,因为token在环境变量里
         return read_from_env()
     tokens = []
     tokens.extend(read(token_save_name))
     add_account = current_type == 'add_account'
     if add_account:
-        logging.info('！！！您启用了添加账号模式，将不会签到！！！')
+        sky_logger.info('！！！您启用了添加账号模式，将不会签到！！！')
     if len(tokens) == 0 or add_account:
         tokens.append(input_for_token())
         save('\n'.join(tokens))
@@ -352,16 +353,17 @@ def start():
     for i in token:
         try:
             sign_success, logs_out = do_sign(get_cred_by_token(i))
-            report(log_wrapper('\n'.join(logs_out), title="森空岛签到"))
+            sky_logger.debug(logs_out)
+            report(notify_wrapper('\n'.join(logs_out), title="森空岛签到"))
             all_logs.extend(logs_out)
             if not sign_success:
                 success = False
         except Exception as ex:
             err = f'签到失败，原因：{str(ex)}'
-            logging.error(err, exc_info=ex)
+            sky_logger.error(err, exc_info=ex)
             all_logs.append(err)
             success = False
-    logging.info("签到完成！")
+    sky_logger.info("签到完成！")
 
     return success, all_logs
 

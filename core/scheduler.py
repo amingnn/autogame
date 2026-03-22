@@ -1,12 +1,14 @@
 import asyncio
 import importlib
+import inspect
 import json
 import os
 import platform
 import sys
 from datetime import datetime, timezone
 from core.common import Config
-from core.logger import mlog, report
+from core.logger import mlog
+from core.notify import report
 
 
 class Scheduler:
@@ -118,6 +120,10 @@ class Scheduler:
 
     def _trigger_shutdown(self) -> None:
         self._shutdown_triggered = True
+        elapsed = (datetime.now(tz=timezone.utc) - self._start_time).total_seconds()
+        h, rem = divmod(int(elapsed), 3600)
+        m, s = divmod(rem, 60)
+        report(f"所有任务完成，总用时 {h}h {m}m {s}s")
         self._push_report()
         delay = self.config.system.shutdown_delay_seconds
         mlog.info(f"系统将在 {delay} 秒后关机...")
@@ -131,7 +137,7 @@ class Scheduler:
         key = self.config.system.server_chan_key
         if not key:
             return
-        from core.logger import push_wechat
+        from core.notify import push_wechat
         push_wechat(key)
 
     # ── 任务执行 ────────────────────────────────────────────────────────────
@@ -159,7 +165,7 @@ class Scheduler:
         mlog.info(f"[{task_name}] 开始执行")
         start = datetime.now()
         try:
-            if asyncio.iscoroutinefunction(run_fn):
+            if inspect.iscoroutinefunction(run_fn):
                 await run_fn()
             else:
                 await asyncio.to_thread(run_fn)
@@ -191,7 +197,7 @@ class Scheduler:
                 if elapsed_hours >= self.config.system.shutdown_timeout_hours:
                     pending = [k for k, v in self._session_done.items() if not v]
                     report(
-                        f"监控超时，为安全起见准备关机，未完成: {pending}"
+                        f"已运行 {elapsed_hours:.1f}h，监控超时，准备关机，未完成: {pending}"
                     )
                     self._trigger_shutdown()
 

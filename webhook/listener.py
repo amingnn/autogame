@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Body, Request
 
-from core.logger import mlog, report, log_wrapper
+from core.logger import mlog
+from core.notify import report, notify_wrapper
 
 if TYPE_CHECKING:
     from core.scheduler import Scheduler
@@ -40,7 +41,7 @@ def _refine_maa_message(payload: dict) -> str:
         content = content[: end_pos + len(end_keyword)]
 
     title = payload.get("title", "明日方舟任务报告")
-    return log_wrapper(content=content, title=title)
+    return notify_wrapper(content=content, title=title)
 
 
 def create_app(scheduler: "Scheduler") -> FastAPI:
@@ -86,7 +87,7 @@ def create_app(scheduler: "Scheduler") -> FastAPI:
         if request.method == "GET":
             params = dict(request.query_params)
             log_msg = params.get("msg", "无")
-            report(log_wrapper(log_msg, title="终末地自动化任务"))
+            report(notify_wrapper(log_msg, title="终末地自动化任务"))
             scheduler.mark_done("maaend")
             return {"status": "ok"}
 

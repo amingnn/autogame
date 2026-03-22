@@ -3,7 +3,7 @@ system:
   webhook_port: 8000
   shutdown_on_complete: true
   shutdown_delay_seconds: 60
-  shutdown_timeout_hours: 2.0
+  shutdown_timeout_hours: 1.0
   poll_interval_hours: 2.0    # 轮询间隔（小时），测试时可改小，如 0.0028 ≈ 10秒
   server_chan_key: "your_key_here"  # Server酱 SendKey
 
@@ -11,7 +11,7 @@ tasks:
   skyland_sign:
     enabled: true
     interval_hours: 10       # 10小时内已运行则跳过
-    webhook_notify: true     # run() 结束后自行 POST /done 通知完成
+    webhook_notify: false     # run() 结束后完成
 
   maa:
     enabled: true

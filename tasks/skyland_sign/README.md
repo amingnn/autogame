@@ -1,1 +1,2 @@
 - 由原项目 https://github.com/xxyz30/skyland-auto-sign 精简而来
+- 自动化前需运行一次存入登陆信息

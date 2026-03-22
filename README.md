@@ -57,14 +57,14 @@ uv run python main.py
 开机自启 → main.py 启动
 ├── Webhook 服务开始监听（:8000）
 └── 轮询首次扫描
-    ├── skyland_sign → 签到 → POST /done 自报完成
-    ├── maa          → no-op（MAA 已开机自启）→ 等待 POST /maa
-    └── maaend       → 启动 MAAEnd.exe → 等待 GET /maa
+    ├── skyland_sign → run() 执行签到 → 返回即完成（webhook_notify: false）
+    ├── maa          → run() no-op（MAA 已开机自启）→ 等待 POST /maa
+    └── maaend       → run() 启动 MAAEnd.exe → 等待 GET /maa
 
-MAA 跑完  → POST /maa  → maa 完成
-终末地跑完 → GET  /maa  → maaend 完成
+MAA 跑完  → POST /maa       → maa 完成
+终末地跑完 → GET  /maa?msg= → maaend 完成
 
-全部完成 → Server酱推送报告 → shutdown /s /t 60
+全部完成 → Server酱推送报告（总用时）→ shutdown /s /t 60
 ```
 
 ---
@@ -87,13 +87,14 @@ MAA 跑完  → POST /maa  → maa 完成
 3. 创建 `tasks/my_task/client.py`，实现 `run()` 函数：
 
 ```python
-# 自完成示例（run 返回即视为完成）
+# 自完成（webhook_notify: false）：run() 返回即视为完成
 def run():
-    ...
+    do_something()
 
-# Webhook 通知完成示例（run 只触发动作，完成由外部 POST /done 通知）
-async def run():
-    start_something()  # 启动外部程序
+# Webhook 完成（webhook_notify: true）：run() 只触发动作
+# 需要外部程序在完成后调用 POST /done 或对应的回调接口
+def run():
+    os.startfile(r"C:\path\to\app.exe")
 ```
 
 4. 在 `config.yaml` 注册任务：
@@ -103,7 +104,7 @@ tasks:
   my_task:
     enabled: true
     interval_hours: 24
-    webhook_notify: false  # true = 需要外部 POST /done 才算完成
+    webhook_notify: false  # true = 等待外部 webhook 回调才算完成
 ```
 
 ---
@@ -124,15 +125,15 @@ tasks:
   skyland_sign:
     enabled: true
     interval_hours: 10
-    webhook_notify: true
+    webhook_notify: false  # run() 返回即完成
   maa:
     enabled: true
     interval_hours: 1
-    webhook_notify: true
+    webhook_notify: true   # 等待 POST /maa
   maaend:
     enabled: true
     interval_hours: 1
-    webhook_notify: true
+    webhook_notify: true   # 等待 GET /maa
 ```
 
 ## License
