@@ -21,11 +21,16 @@ def report(content: str) -> None:
 # ── 格式工具 ───────────────────────────────────────────────────────────────────
 
 def notify_wrapper(content: str, title: str | None = None) -> str:
-    """给每个任务通知生成带标题分隔线的纯文本段落。"""
+    """给每个任务通知生成带标题分隔线的纯文本段落（日志 / 收集用）。"""
     frt = "=" * 10
     header = f"{frt}{title}{frt}" if title else frt * 3
     footer = frt * 3
     return f"{header}\n{content.strip()}\n{footer}"
+
+
+def _to_code_block(text: str) -> str:
+    """推送前将段落包入代码围栏，避免 Server酱 解析 [] 等 Markdown 语法。"""
+    return f"```\n{text}\n```"
 
 
 def push_wechat(send_key: str) -> None:
@@ -33,7 +38,7 @@ def push_wechat(send_key: str) -> None:
     if not _report:
         mlog.warning("推送内容为空，跳过")
         return
-    content = "\n\n".join(_report)
+    content = "\n\n".join(_to_code_block(item) for item in _report)
     url = f"https://sctapi.ftqq.com/{send_key}.send"
     headers = {"Content-Type": "application/json;charset=utf-8"}
     params = {"title": "自动化任务报告", "desp": content}

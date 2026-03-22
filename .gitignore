@@ -218,7 +218,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# 本地配置（包含密钥，不提交）
+# 本地配置与敏感数据（不提交）
 config.yaml
 state.json
 logs/
+tasks/skyland_sign/TOKEN.txt
