@@ -241,8 +241,6 @@ class Scheduler:
 
     async def poll_loop(self) -> None:
         mlog.info("Scheduler 轮询已启动，等待任务触发或 Webhook 回调...")
-        while not self._shutdown_triggered:
-            for task_name in self.config.tasks:
-                await self.run_task(task_name)
-            interval_seconds = self.config.system.poll_interval_hours * 3600
-            await asyncio.sleep(interval_seconds)
+        for task_name in self.config.tasks:
+            await self.run_task(task_name)
+        mlog.info("初始任务扫描完成，等待 webhook 回调或超时...")

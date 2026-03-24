@@ -11,7 +11,6 @@ class SystemConfig(BaseModel):
     shutdown_on_complete: bool = True
     shutdown_delay_seconds: int = 60
     shutdown_timeout_hours: float = 1.5
-    poll_interval_hours: float = 2.0
     server_chan_key: str = ""
 
 

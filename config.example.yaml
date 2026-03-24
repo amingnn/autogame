@@ -4,27 +4,26 @@ system:
   shutdown_on_complete: true
   shutdown_delay_seconds: 60
   shutdown_timeout_hours: 1.5   # 超时强制关机（小时）
-  poll_interval_hours: 2.0      # 轮询间隔（小时），测试时可改小，如 0.0028 ≈ 10秒
   server_chan_key: "your_key_here"  # Server酱 SendKey
 
 tasks:
   skyland_sign:
     enabled: true
-    interval_hours: 20
+    interval_hours: 24           # 每天 1 次（24h 冷却）
     entry: "skyland_sign.skyland.start"  # tasks/ 内 module.function 路径
     start_on: "entry"                    # entry 函数调用时记录开始
     done_on: "entry"                     # entry 返回即完成
 
   maa:
     enabled: true
-    interval_hours: 10
+    interval_hours: 12           # 每天 2 次（12h 冷却）
     entry: ""                            # 无 Python 入口，MAA 开机自启
     start_on: "run"                      # 轮询触发时记录开始
     done_on: "webhook"                   # POST /maa 回调后完成
 
   maaend:
     enabled: true
-    interval_hours: 10
-    entry: "maaend.run"           # 启动 MAAEnd.exe
+    interval_hours: 12           # 每天 2 次（12h 冷却）
+    entry: "maaend.run"                  # 启动 MAAEnd.exe
     start_on: "entry"
     done_on: "webhook"                   # GET /maa 回调后完成
