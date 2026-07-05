@@ -134,11 +134,24 @@ class Scheduler:
         report(f"所有任务完成，总用时 {h}h {m}m {s}s")
         self._push_report()
         delay = self.config.system.shutdown_delay_seconds
-        mlog.info(f"系统将在 {delay} 秒后关机...")
-        if platform.system() == "Windows":
+        action = self.config.system.completion_action
+        if action == "none":
+            mlog.info("全部任务完成，跳过系统电源操作")
+            sys.exit(0)
+
+        mlog.info(f"系统将在 {delay} 秒后{action}...")
+        if platform.system() == "Windows" and action == "shutdown":
             os.system(f"shutdown /s /t {delay}")
+        elif platform.system() == "Windows" and action == "sleep":
+            os.system(
+                "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
+                f"\"Start-Sleep -Seconds {delay}; "
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                "[System.Windows.Forms.Application]::SetSuspendState("
+                "[System.Windows.Forms.PowerState]::Suspend, $false, $false)\""
+            )
         else:
-            mlog.warning("非 Windows 系统，跳过关机命令（仅退出进程）")
+            mlog.warning("非 Windows 系统，跳过系统电源命令（仅退出进程）")
             sys.exit(0)
 
     def _push_report(self) -> None:
@@ -235,7 +248,7 @@ class Scheduler:
             ).total_seconds() / 3600
             if elapsed_hours >= self.config.system.shutdown_timeout_hours:
                 pending = [k for k, v in self._session_done.items() if not v]
-                report(f"已运行 {elapsed_hours:.1f}h，监控超时，准备关机，未完成: {pending}")
+                report(f"已运行 {elapsed_hours:.1f}h，监控超时，准备执行完成动作，未完成: {pending}")
                 self._trigger_shutdown()
                 break
 
