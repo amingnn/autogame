@@ -16,6 +16,8 @@ $triggers = @(
     New-ScheduledTaskTrigger -Daily -At 21:00
 )
 
+# The PowerShell ScheduledTasks enum on some Windows builds does not expose
+# StopExisting, even though Task Scheduler supports it in XML and the GUI.
 $settings = New-ScheduledTaskSettingsSet `
     -WakeToRun `
     -AllowStartIfOnBatteries `
@@ -28,11 +30,17 @@ $principal = New-ScheduledTaskPrincipal `
     -LogonType Interactive `
     -RunLevel Limited
 
-Register-ScheduledTask `
-    -TaskName $TaskName `
+$task = New-ScheduledTask `
     -Action $action `
     -Trigger $triggers `
     -Settings $settings `
     -Principal $principal `
-    -Description "Run AutoGame at 09:00 and 21:00, waking the computer if asleep." `
+    -Description "Run AutoGame at 09:00 and 21:00, waking the computer if asleep."
+
+$xml = $task | Export-ScheduledTask
+$xml = $xml -replace '<MultipleInstancesPolicy>[^<]+</MultipleInstancesPolicy>', '<MultipleInstancesPolicy>StopExisting</MultipleInstancesPolicy>'
+
+Register-ScheduledTask `
+    -TaskName $TaskName `
+    -Xml $xml `
     -Force
