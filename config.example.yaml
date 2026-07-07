@@ -3,7 +3,8 @@ system:
   webhook_port: 8000
   shutdown_on_complete: true
   shutdown_delay_seconds: 60
-  shutdown_timeout_hours: 1.5   # 超时强制关机（小时）
+  shutdown_timeout_hours: 1.5   # 超时强制执行完成动作（小时）
+  completion_action: "sleep"    # 全部完成后 sleep / shutdown / none
   server_chan_key: "your_key_here"  # Server酱 SendKey
 
 tasks:
@@ -17,8 +18,8 @@ tasks:
   maa:
     enabled: true
     interval_hours: 12           # 每天 2 次（12h 冷却）
-    entry: ""                            # 无 Python 入口，MAA 开机自启
-    start_on: "run"                      # 轮询触发时记录开始
+    entry: "maa.run"                     # 启动 MAA
+    start_on: "entry"                    # entry 函数调用时记录开始
     done_on: "webhook"                   # POST /maa 回调后完成
 
   maaend:

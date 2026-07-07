@@ -4,7 +4,6 @@ import inspect
 import json
 import os
 import platform
-import sys
 from datetime import datetime, timezone
 from typing import Callable
 
@@ -24,11 +23,26 @@ class Scheduler:
             for name, cfg in config.tasks.items()
             if cfg.enabled
         }
+        self._had_pending_on_start = any(not done for done in self._session_done.values())
         self._shutdown_triggered = False
+        self._stop_requested = False
+        self._stop_event: asyncio.Event | None = None
         self._start_time = datetime.now(tz=timezone.utc)
         # 每个任务的开始时间，用于 webhook 回调时计算耗时
         self._task_start_times: dict[str, datetime] = {}
         self._log_initial_status()
+
+    @property
+    def stop_requested(self) -> bool:
+        return self._stop_requested
+
+    def bind_stop_event(self, stop_event: asyncio.Event) -> None:
+        self._stop_event = stop_event
+
+    def _request_stop(self) -> None:
+        self._stop_requested = True
+        if self._stop_event is not None:
+            self._stop_event.set()
 
     # ── 持久化 ────────────────────────────────────────────────────────────────
 
@@ -123,23 +137,46 @@ class Scheduler:
         if not self.config.system.shutdown_on_complete:
             return
         if all(self._session_done.values()):
-            mlog.info("所有任务均已完成！")
+            if self._had_pending_on_start:
+                mlog.info("所有任务均已完成！")
+            else:
+                mlog.info("本次没有待执行任务。")
             self._trigger_shutdown()
+
+    def _completion_report(self, elapsed_text: str) -> str:
+        if self._had_pending_on_start:
+            return f"所有任务完成，总用时 {elapsed_text}"
+        return f"本次没有待执行任务，总用时 {elapsed_text}"
 
     def _trigger_shutdown(self) -> None:
         self._shutdown_triggered = True
         elapsed = (datetime.now(tz=timezone.utc) - self._start_time).total_seconds()
         h, rem = divmod(int(elapsed), 3600)
         m, s = divmod(rem, 60)
-        report(f"所有任务完成，总用时 {h}h {m}m {s}s")
+        report(self._completion_report(f"{h}h {m}m {s}s"))
         self._push_report()
         delay = self.config.system.shutdown_delay_seconds
-        mlog.info(f"系统将在 {delay} 秒后关机...")
-        if platform.system() == "Windows":
+        action = self.config.system.completion_action
+        if action == "none":
+            mlog.info("全部任务完成，跳过系统电源操作")
+            self._request_stop()
+            return
+
+        mlog.info(f"系统将在 {delay} 秒后{action}...")
+        if platform.system() == "Windows" and action == "shutdown":
             os.system(f"shutdown /s /t {delay}")
+        elif platform.system() == "Windows" and action == "sleep":
+            os.system(
+                "cmd /c start \"\" powershell.exe -NoProfile -ExecutionPolicy Bypass "
+                f"-Command \"Start-Sleep -Seconds {delay}; "
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                "[System.Windows.Forms.Application]::SetSuspendState("
+                "[System.Windows.Forms.PowerState]::Suspend, $false, $false)\""
+            )
         else:
-            mlog.warning("非 Windows 系统，跳过关机命令（仅退出进程）")
-            sys.exit(0)
+            mlog.warning("非 Windows 系统，跳过系统电源命令（仅退出进程）")
+        self._request_stop()
+
 
     def _push_report(self) -> None:
         key = self.config.system.server_chan_key
@@ -235,7 +272,7 @@ class Scheduler:
             ).total_seconds() / 3600
             if elapsed_hours >= self.config.system.shutdown_timeout_hours:
                 pending = [k for k, v in self._session_done.items() if not v]
-                report(f"已运行 {elapsed_hours:.1f}h，监控超时，准备关机，未完成: {pending}")
+                report(f"已运行 {elapsed_hours:.1f}h，监控超时，准备执行完成动作，未完成: {pending}")
                 self._trigger_shutdown()
                 break
 
@@ -243,4 +280,5 @@ class Scheduler:
         mlog.info("Scheduler 轮询已启动，等待任务触发或 Webhook 回调...")
         for task_name in self.config.tasks:
             await self.run_task(task_name)
+        self._check_shutdown()
         mlog.info("初始任务扫描完成，等待 webhook 回调或超时...")

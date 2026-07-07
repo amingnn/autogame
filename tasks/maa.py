@@ -2,9 +2,9 @@ import os
 from pathlib import Path
 import subprocess
 
-path = Path(r"C:\Users\GamerBot\Desktop\MaaEnd.exe.lnk")
+path = Path(r"D:\OneDrive\win\桌面\MAA.exe.lnk")
 
-def run():
+def run() -> None:
     if not path.exists():
         raise FileNotFoundError("MAA shortcut not found.")
 
@@ -13,5 +13,3 @@ def run():
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
     )
     os.startfile(path)
-
-# 后续由脚本自动完成

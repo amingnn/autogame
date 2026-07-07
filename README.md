@@ -1,6 +1,6 @@
 # Auto Game
 
-轻量级、配置驱动的游戏自动化框架。通过 Webhook 回调与定时轮询双触发机制，实现开机自启、自动运行、全部完成后自动关机的无人值守流程。
+轻量级、配置驱动的游戏自动化框架。通过 Webhook 回调与定时轮询双触发机制，实现定时唤醒、自动运行、全部完成后自动睡眠的无人值守流程。
 
 ## 免责声明
 
@@ -47,24 +47,24 @@ uv run python tasks/skyland_sign/skyland.py
 uv run python main.py
 ```
 
-建议配置为**开机自启**，脚本会自动完成所有任务后关机。
+建议通过 Windows 计划任务定时运行，脚本会自动完成所有任务后睡眠。
 
 ---
 
 ## 运行流程
 
 ```
-开机自启 → main.py 启动
+计划任务唤醒/定时触发 → main.py 启动
 ├── Webhook 服务开始监听（:8000）
 └── 轮询首次扫描
     ├── skyland_sign → 调用 skyland_sign.skyland.start() → 返回即完成（done_on: entry）
-    ├── maa          → 无入口函数（MAA 已开机自启）→ 等待 POST /maa
-    └── maaend       → 调用 maaend.client.run() 启动 MAAEnd.exe → 等待 GET /maa
+    ├── maa          → 调用 maa.run() 启动 MAA → 等待 POST /maa
+    └── maaend       → 调用 maaend.run() 启动 MAAEnd.exe → 等待 GET /maa
 
 MAA 跑完  → POST /maa       → maa 完成
 终末地跑完 → GET  /maa?msg= → maaend 完成
 
-全部完成 → notify 报告写入 logs/notify-*.log → Server酱推送 → shutdown /s /t 60
+全部完成 → notify 报告写入 logs/notify-*.log → Server酱推送 → sleep
 ```
 
 ---
@@ -127,9 +127,10 @@ tasks:
 system:
   log_level: "INFO"
   webhook_port: 8000
-  shutdown_on_complete: true      # 全部完成后自动关机
-  shutdown_delay_seconds: 60      # 关机前等待秒数
-  shutdown_timeout_hours: 1.5     # 超时强制关机（小时）
+  shutdown_on_complete: true      # 全部完成后执行 completion_action
+  shutdown_delay_seconds: 60      # 执行动作前等待秒数
+  shutdown_timeout_hours: 1.5     # 超时强制执行完成动作（小时）
+  completion_action: "sleep"      # sleep / shutdown / none
   poll_interval_hours: 2.0        # 轮询间隔（测试时可设为 0.003 ≈ 10秒）
   server_chan_key: ""              # Server酱 SendKey，留空不推送
 
@@ -144,8 +145,8 @@ tasks:
   maa:
     enabled: true
     interval_hours: 10
-    entry: ""            # 留空表示无 Python 入口（纯 webhook 驱动）
-    start_on: "run"
+    entry: "maa.run"     # 启动 MAA
+    start_on: "entry"
     done_on: "webhook"
 
   maaend:
