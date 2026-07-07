@@ -23,6 +23,7 @@ class Scheduler:
             for name, cfg in config.tasks.items()
             if cfg.enabled
         }
+        self._had_pending_on_start = any(not done for done in self._session_done.values())
         self._shutdown_triggered = False
         self._stop_requested = False
         self._stop_event: asyncio.Event | None = None
@@ -136,15 +137,23 @@ class Scheduler:
         if not self.config.system.shutdown_on_complete:
             return
         if all(self._session_done.values()):
-            mlog.info("所有任务均已完成！")
+            if self._had_pending_on_start:
+                mlog.info("所有任务均已完成！")
+            else:
+                mlog.info("本次没有待执行任务。")
             self._trigger_shutdown()
+
+    def _completion_report(self, elapsed_text: str) -> str:
+        if self._had_pending_on_start:
+            return f"所有任务完成，总用时 {elapsed_text}"
+        return f"本次没有待执行任务，总用时 {elapsed_text}"
 
     def _trigger_shutdown(self) -> None:
         self._shutdown_triggered = True
         elapsed = (datetime.now(tz=timezone.utc) - self._start_time).total_seconds()
         h, rem = divmod(int(elapsed), 3600)
         m, s = divmod(rem, 60)
-        report(f"所有任务完成，总用时 {h}h {m}m {s}s")
+        report(self._completion_report(f"{h}h {m}m {s}s"))
         self._push_report()
         delay = self.config.system.shutdown_delay_seconds
         action = self.config.system.completion_action

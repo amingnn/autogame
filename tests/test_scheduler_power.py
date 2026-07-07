@@ -94,6 +94,35 @@ class SchedulerPollLoopTests(unittest.IsolatedAsyncioTestCase):
 
             trigger_shutdown.assert_called_once()
 
+    async def test_poll_loop_reports_no_pending_tasks_when_all_enabled_tasks_are_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Config(
+                db_path=Path(tmp) / "state.json",
+                system=SystemConfig(shutdown_on_complete=True, completion_action="none"),
+                tasks={
+                    "maa": TaskConfig(
+                        enabled=True,
+                        interval_hours=12,
+                        entry="",
+                        done_on="webhook",
+                    )
+                },
+            )
+            config.db_path.write_text(
+                json.dumps({"maa": datetime.now(tz=timezone.utc).isoformat()}),
+                encoding="utf-8",
+            )
+            scheduler = Scheduler(config)
+
+            with (
+                patch.object(scheduler, "_push_report"),
+                patch("core.scheduler.report") as report,
+            ):
+                await scheduler.poll_loop()
+
+            report.assert_called_once()
+            self.assertIn("本次没有待执行任务", report.call_args.args[0])
+
 
 class ConfigExampleTests(unittest.TestCase):
     def test_maa_task_has_start_entry(self) -> None:
