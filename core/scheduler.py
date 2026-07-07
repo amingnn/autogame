@@ -4,7 +4,6 @@ import inspect
 import json
 import os
 import platform
-import sys
 from datetime import datetime, timezone
 from typing import Callable
 
@@ -25,10 +24,24 @@ class Scheduler:
             if cfg.enabled
         }
         self._shutdown_triggered = False
+        self._stop_requested = False
+        self._stop_event: asyncio.Event | None = None
         self._start_time = datetime.now(tz=timezone.utc)
         # 每个任务的开始时间，用于 webhook 回调时计算耗时
         self._task_start_times: dict[str, datetime] = {}
         self._log_initial_status()
+
+    @property
+    def stop_requested(self) -> bool:
+        return self._stop_requested
+
+    def bind_stop_event(self, stop_event: asyncio.Event) -> None:
+        self._stop_event = stop_event
+
+    def _request_stop(self) -> None:
+        self._stop_requested = True
+        if self._stop_event is not None:
+            self._stop_event.set()
 
     # ── 持久化 ────────────────────────────────────────────────────────────────
 
@@ -137,22 +150,24 @@ class Scheduler:
         action = self.config.system.completion_action
         if action == "none":
             mlog.info("全部任务完成，跳过系统电源操作")
-            sys.exit(0)
+            self._request_stop()
+            return
 
         mlog.info(f"系统将在 {delay} 秒后{action}...")
         if platform.system() == "Windows" and action == "shutdown":
             os.system(f"shutdown /s /t {delay}")
         elif platform.system() == "Windows" and action == "sleep":
             os.system(
-                "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
-                f"\"Start-Sleep -Seconds {delay}; "
+                "cmd /c start \"\" powershell.exe -NoProfile -ExecutionPolicy Bypass "
+                f"-Command \"Start-Sleep -Seconds {delay}; "
                 "Add-Type -AssemblyName System.Windows.Forms; "
                 "[System.Windows.Forms.Application]::SetSuspendState("
                 "[System.Windows.Forms.PowerState]::Suspend, $false, $false)\""
             )
         else:
             mlog.warning("非 Windows 系统，跳过系统电源命令（仅退出进程）")
-            sys.exit(0)
+        self._request_stop()
+
 
     def _push_report(self) -> None:
         key = self.config.system.server_chan_key
@@ -256,4 +271,5 @@ class Scheduler:
         mlog.info("Scheduler 轮询已启动，等待任务触发或 Webhook 回调...")
         for task_name in self.config.tasks:
             await self.run_task(task_name)
+        self._check_shutdown()
         mlog.info("初始任务扫描完成，等待 webhook 回调或超时...")

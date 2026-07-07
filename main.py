@@ -12,6 +12,8 @@ async def main() -> None:
     mlog.info(f"配置加载完成，Webhook 端口: {config.system.webhook_port}")
 
     scheduler = Scheduler(config)
+    stop_event = asyncio.Event()
+    scheduler.bind_stop_event(stop_event)
     app = create_app(scheduler)
 
     server = uvicorn.Server(
@@ -25,10 +27,29 @@ async def main() -> None:
         )
     )
 
+    server_task = asyncio.create_task(server.serve())
+    poll_task = asyncio.create_task(scheduler.poll_loop())
+    watchdog_task = asyncio.create_task(scheduler.timeout_watchdog())
+    stop_task = asyncio.create_task(stop_event.wait())
+
+    done, pending = await asyncio.wait(
+        {server_task, watchdog_task, stop_task},
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    if stop_task in done:
+        mlog.info("调度器请求退出，正在停止 Webhook 服务...")
+        server.should_exit = True
+
+    for task in pending:
+        task.cancel()
+
     await asyncio.gather(
-        server.serve(),
-        scheduler.poll_loop(),
-        scheduler.timeout_watchdog(),
+        server_task,
+        poll_task,
+        watchdog_task,
+        stop_task,
+        return_exceptions=True,
     )
 
 
