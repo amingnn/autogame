@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 def _refine_maa_message(payload: dict) -> str:
     """清洗 MAA 推送的日志内容，减少冗余信息。"""
-    content = payload.get("content", "")
+    content = payload.get("content",  payload.get("msg", ""))
 
     content = content.replace("[TraceLogBrush]", " ")
 
