@@ -34,6 +34,55 @@ def _查找进程(process_name: str) -> list[psutil.Process]:
     return result
 
 
+def _获取进程创建时间(process: psutil.Process) -> float | None:
+    """读取进程创建时间，用于排除启动前就存在的同名进程。"""
+
+    try:
+        return process.create_time()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
+
+
+def _停止已有进程(processes: list[psutil.Process], process_name: str) -> None:
+    """停止旧进程，确保本次启动能够被识别为真实启动。"""
+
+    if not processes:
+        return
+
+    targets: dict[int, psutil.Process] = {}
+    for process in processes:
+        try:
+            targets[process.pid] = process
+            for child in process.children(recursive=True):
+                targets[child.pid] = child
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    mlog.warning("发现已运行的目标进程，准备重启：{}（{} 个）", process_name, len(targets))
+    for process in targets.values():
+        try:
+            process.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        remaining = _查找进程(process_name)
+        if not remaining:
+            return
+        time.sleep(0.1)
+
+    remaining = _查找进程(process_name)
+    for process in remaining:
+        try:
+            process.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    if _查找进程(process_name):
+        raise RuntimeError(f"无法停止旧的目标进程：{process_name}")
+
+
 def _启动并验证同步(launcher: LauncherConfig) -> None:
     """启动应用并在限定时间内确认目标进程真实存在。"""
 
@@ -41,11 +90,24 @@ def _启动并验证同步(launcher: LauncherConfig) -> None:
     if not path.exists():
         raise FileNotFoundError(f"应用启动路径不存在：{path}")
 
-    before = {process.pid for process in _查找进程(launcher.process_name)}
+    before = {
+        process.pid: _获取进程创建时间(process)
+        for process in _查找进程(launcher.process_name)
+    }
     if before:
-        mlog.info("目标进程已存在，跳过重复启动：{}", launcher.process_name)
-        return
+        if not launcher.restart_existing:
+            mlog.info("目标进程已存在，按配置复用：{}", launcher.process_name)
+            return
+        _停止已有进程(
+            [
+                process
+                for process in _查找进程(launcher.process_name)
+                if process.pid in before
+            ],
+            launcher.process_name,
+        )
 
+    launch_started_at = time.time()
     if path.suffix.casefold() == ".lnk":
         os.startfile(str(path))
     else:
@@ -58,7 +120,14 @@ def _启动并验证同步(launcher: LauncherConfig) -> None:
     deadline = time.monotonic() + launcher.startup_timeout_seconds
     while time.monotonic() < deadline:
         processes = _查找进程(launcher.process_name)
-        if any(process.pid not in before for process in processes):
+        if any(
+            process.pid not in before
+            and (
+                (created_at := _获取进程创建时间(process)) is not None
+                and created_at >= launch_started_at
+            )
+            for process in processes
+        ):
             mlog.info("应用启动验证成功：{}", launcher.process_name)
             return
         time.sleep(0.25)

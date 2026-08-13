@@ -55,7 +55,7 @@ flowchart TD
 ### 3.1 `core/common.py`
 
 - `SystemConfig`：日志、端口、超时、电源动作、SendKey；
-- `LauncherConfig`：启动类型、应用路径、进程名和启动验证超时；
+- `LauncherConfig`：启动类型、应用路径、进程名、启动验证超时和旧进程处理策略；
 - `TaskConfig`：任务启用开关、间隔小时和启动器；
 - `Config.load()`：读取 YAML 并使用 Pydantic 校验。
 
@@ -93,9 +93,9 @@ flowchart TD
 ### 4.2 `core/launcher.py`
 
 - `启动并验证()`：异步调用应用启动验证；
-- `_启动并验证同步()`：检查路径、避免重复启动、启动 exe/lnk，并在超时时间内使用 psutil 检查进程名。
+- `_启动并验证同步()`：检查路径，默认停止同名旧进程，启动 exe/lnk，并在超时时间内使用 psutil 检查启动后的新进程。
 
-应用存在但已运行时不会重复启动；应用启动后未出现目标进程则任务失败。
+默认 `restart_existing=true`，因此同名旧进程不会被误判为本次启动成功；旧进程停止后仍未出现新的目标进程，任务会失败。只有显式设置 `restart_existing=false` 时才复用已有进程。
 
 ### 4.3 `core/scheduler.py`
 

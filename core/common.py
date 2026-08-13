@@ -34,6 +34,7 @@ class LauncherConfig(BaseModel):
     path: str = ""
     process_name: str = ""
     startup_timeout_seconds: float = Field(default=15.0, ge=1, le=300)
+    restart_existing: bool = True
 
     @model_validator(mode="after")
     def _校验应用启动配置(self) -> "LauncherConfig":

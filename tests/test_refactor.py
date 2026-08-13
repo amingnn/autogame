@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from core.common import Config, LauncherConfig, SystemConfig, TaskConfig
 from core.config_store import ConfigStore, 迁移旧版配置
+from core import launcher as launcher_module
 from core.scheduler import Scheduler
 from core.task_registry import TaskDefinition
 from core.logger import _清理旧日志
@@ -151,6 +152,56 @@ class 任务状态测试(unittest.IsolatedAsyncioTestCase):
             with patch.object(scheduler, "run_task", new=AsyncMock()) as run_task:
                 await scheduler.poll_loop()
                 run_task.assert_not_awaited()
+
+
+class 应用启动器测试(unittest.TestCase):
+    """验证旧进程不会被误判为本次任务已经启动。"""
+
+    def test_已有进程会被重启并验证新进程(self) -> None:
+        class 假进程:
+            def __init__(self, pid: int, created_at: float) -> None:
+                self.pid = pid
+                self.created_at = created_at
+                self.terminated = False
+
+            def children(self, recursive: bool = False) -> list[object]:
+                return []
+
+            def terminate(self) -> None:
+                self.terminated = True
+
+            def kill(self) -> None:
+                self.terminated = True
+
+            def create_time(self) -> float:
+                return self.created_at
+
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "MAA.exe"
+            executable.write_bytes(b"")
+            old_process = 假进程(101, 100)
+            new_process = 假进程(202, 200)
+            launcher = LauncherConfig(
+                type="application",
+                path=str(executable),
+                process_name="MAA.exe",
+                startup_timeout_seconds=1,
+            )
+
+            with (
+                patch.object(
+                    launcher_module,
+                    "_查找进程",
+                    side_effect=[[old_process], [old_process], [], [new_process]],
+                ),
+                patch.object(launcher_module.subprocess, "Popen"),
+                patch.object(launcher_module.time, "time", return_value=150),
+                patch.object(launcher_module.time, "monotonic", side_effect=[0, 1, 2, 2]),
+                patch.object(launcher_module.time, "sleep"),
+            ):
+                launcher_module._启动并验证同步(launcher)
+
+            self.assertTrue(old_process.terminated)
 
 
 class 管理接口测试(unittest.TestCase):

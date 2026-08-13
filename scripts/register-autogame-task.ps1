@@ -43,7 +43,7 @@ $task = New-ScheduledTask `
     -Trigger $triggers `
     -Settings $settings `
     -Principal $principal `
-    -Description "Run AutoGame at 09:00 and 21:00, waking the computer if asleep."
+    -Description "Run AutoGame at 07:00 and 19:00, waking the computer if asleep."
 $xml = $task | Export-ScheduledTask
 $xml = $xml -replace '<MultipleInstancesPolicy>[^<]+</MultipleInstancesPolicy>', '<MultipleInstancesPolicy>StopExisting</MultipleInstancesPolicy>'
 Register-ScheduledTask -TaskName $TaskName -TaskPath '\' -Xml $xml -Force | Out-Null

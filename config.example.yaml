@@ -22,6 +22,7 @@ tasks:
       path: "D:\\OneDrive\\win\\桌面\\MAA.exe.lnk"
       process_name: "MAA.exe"
       startup_timeout_seconds: 15
+      restart_existing: true
 
   maaend:
     enabled: true
@@ -31,3 +32,4 @@ tasks:
       path: "D:\\OneDrive\\win\\桌面\\MaaEnd.exe.lnk"
       process_name: "MaaEnd.exe"
       startup_timeout_seconds: 15
+      restart_existing: true
