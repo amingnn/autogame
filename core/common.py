@@ -37,7 +37,7 @@ class LauncherConfig(BaseModel):
     restart_existing: bool = True
 
     @model_validator(mode="after")
-    def _校验应用启动配置(self) -> "LauncherConfig":
+    def _validate_launcher_config(self) -> "LauncherConfig":
         """应用启动方式必须同时提供路径和进程名。"""
 
         if self.type == "application" and (not self.path or not self.process_name):

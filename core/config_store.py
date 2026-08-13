@@ -69,8 +69,8 @@ class ConfigStore:
 
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
-            self._校验版本(expected_revision)
-            data = self._读取数据()
+            self._validate_revision(expected_revision)
+            data = self._read_data()
             tasks = data.setdefault("tasks", {})
             if not isinstance(tasks, Mapping):
                 raise ValueError("配置文件中的 tasks 必须是对象")
@@ -84,7 +84,7 @@ class ConfigStore:
             for key, value in patch.items():
                 current[key] = value
             Config.model_validate(_to_plain(data))
-            self._备份并写入(data)
+            self._backup_and_write(data)
         return self.load()
 
     def update_system(
@@ -111,8 +111,8 @@ class ConfigStore:
 
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
-            self._校验版本(expected_revision)
-            data = self._读取数据()
+            self._validate_revision(expected_revision)
+            data = self._read_data()
             system = data.setdefault("system", {})
             if not isinstance(system, Mapping):
                 raise ValueError("配置文件中的 system 必须是对象")
@@ -122,16 +122,16 @@ class ConfigStore:
             for key, value in patch.items():
                 system[key] = value
             Config.model_validate(_to_plain(data))
-            self._备份并写入(data)
+            self._backup_and_write(data)
         return self.load()
 
-    def _校验版本(self, expected_revision: str | None) -> None:
+    def _validate_revision(self, expected_revision: str | None) -> None:
         """校验页面提交时携带的配置版本。"""
 
         if expected_revision and expected_revision != self.revision():
             raise ConfigConflictError("配置文件已经被其他操作修改，请重新加载")
 
-    def _读取数据(self) -> Any:
+    def _read_data(self) -> Any:
         """读取 ruamel YAML 数据。"""
 
         if not self.path.exists():
@@ -141,7 +141,7 @@ class ConfigStore:
             raise ValueError("配置文件的顶层必须是对象")
         return data
 
-    def _备份并写入(self, data: Any) -> None:
+    def _backup_and_write(self, data: Any) -> None:
         """创建备份并原子写入配置。"""
 
         old_bytes = self.path.read_bytes() if self.path.exists() else b""
@@ -159,7 +159,7 @@ class ConfigStore:
         os.replace(temporary, self.path)
 
 
-def 迁移旧版配置(path: Path) -> bool:
+def migrate_legacy_config(path: Path) -> bool:
     """把旧版入口字段迁移为类型化启动器，返回是否发生迁移。"""
 
     yaml_editor = YAML(typ="rt")

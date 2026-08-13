@@ -18,7 +18,7 @@ class TaskDefinition:
     runner: Callable[[], object] | None = None
 
 
-def _运行明日方舟签到() -> object:
+def _run_skyland_sign() -> object:
     """调用内置签到任务，不从配置文件导入任意 Python 入口。"""
 
     from tasks.skyland_sign.skyland import start
@@ -30,7 +30,7 @@ TASK_DEFINITIONS: dict[str, TaskDefinition] = {
     "skyland_sign": TaskDefinition(
         name="skyland_sign",
         completion_signal="internal",
-        runner=_运行明日方舟签到,
+        runner=_run_skyland_sign,
     ),
     "maa": TaskDefinition(name="maa", completion_signal="maa_post"),
     "maaend": TaskDefinition(name="maaend", completion_signal="maa_get"),

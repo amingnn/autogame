@@ -12,18 +12,18 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from core.common import Config, LauncherConfig, SystemConfig, TaskConfig
-from core.config_store import ConfigStore, 迁移旧版配置
+from core.config_store import ConfigStore, migrate_legacy_config
 from core import launcher as launcher_module
 from core.scheduler import Scheduler
 from core.task_registry import TaskDefinition
-from core.logger import _清理旧日志
+from core.logger import _cleanup_old_logs
 from webhook import create_app
 
 
-class 配置保存测试(unittest.TestCase):
+class ConfigStoreTests(unittest.TestCase):
     """测试 YAML 注释、备份、版本和全局配置保存。"""
 
-    def test_保存配置会保留注释并创建备份(self) -> None:
+    def test_save_preserves_comments_and_creates_backup(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.yaml"
             path.write_text(
@@ -46,7 +46,7 @@ class 配置保存测试(unittest.TestCase):
             self.assertIn("shutdown_delay_seconds: 30", text)
             self.assertTrue(path.with_name("config.yaml.bak").exists())
 
-    def test_日志只保留最近七天(self) -> None:
+    def test_cleanup_keeps_recent_logs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             log_dir = Path(directory)
             old_log = log_dir / "old.log"
@@ -56,12 +56,12 @@ class 配置保存测试(unittest.TestCase):
             old_time = time.time() - 8 * 24 * 60 * 60
             os.utime(old_log, (old_time, old_time))
 
-            _清理旧日志(log_dir)
+            _cleanup_old_logs(log_dir)
 
             self.assertFalse(old_log.exists())
             self.assertTrue(recent_log.exists())
 
-    def test_旧配置迁移并移除旧入口字段(self) -> None:
+    def test_migrate_legacy_config_removes_old_fields(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.yaml"
             path.write_text(
@@ -74,17 +74,17 @@ class 配置保存测试(unittest.TestCase):
                 "    done_on: entry\n",
                 encoding="utf-8",
             )
-            self.assertTrue(迁移旧版配置(path))
+            self.assertTrue(migrate_legacy_config(path))
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("entry:", text)
             self.assertIn("type: none", text)
             self.assertTrue(path.with_name("config.yaml.bak").exists())
 
 
-class 任务状态测试(unittest.IsolatedAsyncioTestCase):
+class TaskStateTests(unittest.IsolatedAsyncioTestCase):
     """测试内置任务和应用回调任务的状态转换。"""
 
-    async def test_内置任务完成(self) -> None:
+    async def test_internal_task_completes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config = Config(
@@ -101,7 +101,7 @@ class 任务状态测试(unittest.IsolatedAsyncioTestCase):
             state = scheduler.get_status_snapshot()["tasks"][0]["state"]  # type: ignore[index]
             self.assertEqual(state, "completed")
 
-    async def test_应用启动后等待回调再完成(self) -> None:
+    async def test_application_waits_for_callback(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config = Config(
@@ -124,7 +124,7 @@ class 任务状态测试(unittest.IsolatedAsyncioTestCase):
             definition = TaskDefinition("maa", "maa_post")
             with (
                 patch("core.scheduler.get_task_definition", return_value=definition),
-                patch("core.scheduler.启动并验证", new=AsyncMock()),
+                patch("core.scheduler.start_and_verify", new=AsyncMock()),
             ):
                 self.assertTrue(await scheduler.run_task("maa", force=True))
             task = scheduler.get_status_snapshot()["tasks"][0]  # type: ignore[index]
@@ -135,7 +135,7 @@ class 任务状态测试(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(task["state"], "completed")
             self.assertFalse(scheduler.mark_done("maa"))
 
-    async def test_桌面调度器不会自动扫描(self) -> None:
+    async def test_desktop_scheduler_does_not_scan(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             scheduler = Scheduler(
@@ -154,11 +154,11 @@ class 任务状态测试(unittest.IsolatedAsyncioTestCase):
                 run_task.assert_not_awaited()
 
 
-class 应用启动器测试(unittest.TestCase):
+class LauncherTests(unittest.TestCase):
     """验证旧进程不会被误判为本次任务已经启动。"""
 
-    def test_已有进程会被重启并验证新进程(self) -> None:
-        class 假进程:
+    def test_existing_process_is_restarted_and_new_process_verified(self) -> None:
+        class FakeProcess:
             def __init__(self, pid: int, created_at: float) -> None:
                 self.pid = pid
                 self.created_at = created_at
@@ -179,8 +179,8 @@ class 应用启动器测试(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             executable = Path(directory) / "MAA.exe"
             executable.write_bytes(b"")
-            old_process = 假进程(101, 100)
-            new_process = 假进程(202, 200)
+            old_process = FakeProcess(101, 100)
+            new_process = FakeProcess(202, 200)
             launcher = LauncherConfig(
                 type="application",
                 path=str(executable),
@@ -191,7 +191,7 @@ class 应用启动器测试(unittest.TestCase):
             with (
                 patch.object(
                     launcher_module,
-                    "_查找进程",
+                    "_find_processes",
                     side_effect=[[old_process], [old_process], [], [new_process]],
                 ),
                 patch.object(launcher_module.subprocess, "Popen"),
@@ -199,15 +199,15 @@ class 应用启动器测试(unittest.TestCase):
                 patch.object(launcher_module.time, "monotonic", side_effect=[0, 1, 2, 2]),
                 patch.object(launcher_module.time, "sleep"),
             ):
-                launcher_module._启动并验证同步(launcher)
+                launcher_module._start_and_verify_sync(launcher)
 
             self.assertTrue(old_process.terminated)
 
 
-class 管理接口测试(unittest.TestCase):
+class ManagementApiTests(unittest.TestCase):
     """测试桌面端使用的状态和配置接口。"""
 
-    def test_任务和全局配置接口(self) -> None:
+    def test_task_and_system_config_api(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = root / "config.yaml"

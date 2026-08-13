@@ -14,7 +14,7 @@ from loguru import logger
 _configured = False
 
 
-class _标准日志转发器(logging.Handler):
+class _StandardLogHandler(logging.Handler):
     """把 Uvicorn 等标准库日志转发给 Loguru。"""
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -34,7 +34,7 @@ class _标准日志转发器(logging.Handler):
         )
 
 
-def _清理旧日志(log_dir: Path) -> None:
+def _cleanup_old_logs(log_dir: Path) -> None:
     """删除日志目录中修改时间超过七天的日志文件。"""
 
     cutoff = time.time() - 7 * 24 * 60 * 60
@@ -47,10 +47,10 @@ def _清理旧日志(log_dir: Path) -> None:
             continue
 
 
-def _配置标准库日志() -> None:
+def _configure_standard_logging() -> None:
     """让第三方标准库日志进入 Loguru。"""
 
-    handler = _标准日志转发器()
+    handler = _StandardLogHandler()
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(logging.DEBUG)
@@ -79,7 +79,7 @@ def configure_logging(log_dir: Path, level: str = "INFO", force: bool = False) -
         return
 
     log_dir.mkdir(parents=True, exist_ok=True)
-    _清理旧日志(log_dir)
+    _cleanup_old_logs(log_dir)
     logger.remove()
 
     common_format = (
@@ -121,11 +121,11 @@ def configure_logging(log_dir: Path, level: str = "INFO", force: bool = False) -
         backtrace=True,
         diagnose=False,
     )
-    _配置标准库日志()
+    _configure_standard_logging()
     _configured = True
 
 
-def 初始化默认日志() -> None:
+def initialize_default_logging() -> None:
     """在其他模块导入日志对象前创建默认日志配置。"""
 
     from core.common import Config
@@ -134,7 +134,7 @@ def 初始化默认日志() -> None:
     configure_logging(default.log_dir, default.system.log_level)
 
 
-初始化默认日志()
+initialize_default_logging()
 
 mlog = logger.bind(component="autogame")
 notify_logger = logger.bind(component="notify", channel="notify")

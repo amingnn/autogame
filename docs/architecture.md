@@ -69,7 +69,7 @@ flowchart TD
 - `ConfigStore.load()`：读取当前正式配置；
 - `ConfigStore.update_task()`：保存任务配置；
 - `ConfigStore.update_system()`：保存全局配置；
-- `迁移旧版配置()`：将旧 `entry/start_on/done_on` 转换为 `launcher`。
+- `migrate_legacy_config()`：将旧 `entry/start_on/done_on` 转换为 `launcher`。
 
 保存顺序：文件锁 → 版本校验 → 读取 YAML → Pydantic 校验 → 写入 `.bak` → 临时文件写入 → 原子替换 → 重新加载。
 
@@ -92,8 +92,8 @@ flowchart TD
 
 ### 4.2 `core/launcher.py`
 
-- `启动并验证()`：异步调用应用启动验证；
-- `_启动并验证同步()`：检查路径，默认停止同名旧进程，启动 exe/lnk，并在超时时间内使用 psutil 检查启动后的新进程。
+- `start_and_verify()`：异步调用应用启动验证；
+- `_start_and_verify_sync()`：检查路径，默认停止同名旧进程，启动 exe/lnk，并在超时时间内使用 psutil 检查启动后的新进程。
 
 默认 `restart_existing=true`，因此同名旧进程不会被误判为本次启动成功；旧进程停止后仍未出现新的目标进程，任务会失败。只有显式设置 `restart_existing=false` 时才复用已有进程。
 
@@ -166,8 +166,8 @@ MAA 等待回调时不新增公开状态，而是保持 `running` 并设置 `wai
 ### `core/logger.py`
 
 - `configure_logging()`：配置控制台、主日志和通知日志；
-- `_清理旧日志()`：删除超过七天的日志文件；
-- `_配置标准库日志()`：将 Uvicorn、FastAPI 等标准日志转发到 Loguru；
+- `_cleanup_old_logs()`：删除超过七天的日志文件；
+- `_configure_standard_logging()`：将 Uvicorn、FastAPI 等标准日志转发到 Loguru；
 - `mlog`：项目主日志对象；
 - `notify_logger`：通知日志对象。
 

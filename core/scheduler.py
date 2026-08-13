@@ -11,10 +11,10 @@ from datetime import datetime, timezone
 
 from core.common import Config
 from core.config_store import ConfigStore
-from core.launcher import 启动并验证
+from core.launcher import start_and_verify
 from core.logger import mlog
 from core.notify import push_wechat, report
-from core.status import TaskRuntime, TaskState, 转换时间
+from core.status import TaskRuntime, TaskState, format_datetime
 from core.task_registry import get_task_definition
 
 
@@ -113,8 +113,8 @@ class Scheduler:
 
         return {
             "status": service_status,
-            "generated_at": 转换时间(now),
-            "started_at": 转换时间(self._start_time),
+            "generated_at": format_datetime(now),
+            "started_at": format_datetime(self._start_time),
             "shutdown_requested": self._stop_requested,
             "config_revision": self._config_store.revision(),
             "auto_schedule": self.auto_schedule,
@@ -252,7 +252,7 @@ class Scheduler:
         try:
             definition = get_task_definition(task_name)
             if task_config.launcher.type == "application":
-                await 启动并验证(task_config.launcher)
+                await start_and_verify(task_config.launcher)
                 runtime.waiting_for_callback = definition.completion_signal != "internal"
                 self._set_runtime_state(task_name, "running")
                 if definition.completion_signal == "internal":

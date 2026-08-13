@@ -7,70 +7,70 @@
     <link rel="stylesheet" href="/ui/app.css" />
   </head>
   <body>
-    <div class="应用外壳">
-      <aside class="侧栏">
-        <div class="品牌"><span class="品牌标记">A</span><span>AutoGame</span></div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">A</span><span>AutoGame</span></div>
         <nav>
-          <button class="导航项 active" data-section="任务"><span>▤</span>任务</button>
-          <button class="导航项" data-section="日志"><span>▤</span>日志</button>
-          <button class="导航项" data-section="设置"><span>⚙</span>设置</button>
+          <button class="nav-item active" data-section="tasks"><span>▤</span>任务</button>
+          <button class="nav-item" data-section="logs"><span>▤</span>日志</button>
+          <button class="nav-item" data-section="settings"><span>⚙</span>设置</button>
         </nav>
-        <div class="连接状态"><span class="状态圆点"></span><span id="连接文字">正在连接</span></div>
+        <div class="connection-status"><span class="status-dot"></span><span id="connectionText">正在连接</span></div>
       </aside>
 
-      <main class="主区域">
-        <header class="顶部栏">
+      <main class="main-content">
+        <header class="top-bar">
           <div>
-            <p class="眉标题">自动化控制台</p>
-            <h1 id="页面标题">任务</h1>
+            <p class="eyebrow">自动化控制台</p>
+            <h1 id="pageTitle">任务</h1>
           </div>
-          <div class="顶部操作">
-            <button class="次要按钮" id="重载按钮">重新加载配置</button>
-            <button class="主要按钮" id="顶部运行按钮">▶ 运行任务</button>
+          <div class="top-actions">
+            <button class="secondary-button" id="reloadButton">重新加载配置</button>
+            <button class="primary-button" id="topRunButton">▶ 运行任务</button>
           </div>
         </header>
 
-        <section class="统计卡片">
-          <article class="统计卡片项"><span class="统计图标 蓝色">▣</span><div><strong id="任务总数">0</strong><span>任务总数</span></div></article>
-          <article class="统计卡片项"><span class="统计图标 绿色">▶</span><div><strong id="运行数量">0</strong><span>正在运行</span></div></article>
-          <article class="统计卡片项"><span class="统计图标 紫色">◔</span><div><strong id="总体进度">0%</strong><span>本次进度</span></div></article>
+        <section class="summary-cards">
+          <article class="summary-card"><span class="summary-icon blue">▣</span><div><strong id="taskCount">0</strong><span>任务总数</span></div></article>
+          <article class="summary-card"><span class="summary-icon green">▶</span><div><strong id="runningCount">0</strong><span>正在运行</span></div></article>
+          <article class="summary-card"><span class="summary-icon purple">◔</span><div><strong id="overallProgress">0%</strong><span>本次进度</span></div></article>
         </section>
 
-        <section class="内容区" id="任务区域">
-          <div class="任务列表面板">
-            <div class="面板标题"><h2>任务列表</h2><span id="更新时间">等待数据</span></div>
-            <div class="表格滚动区">
+        <section class="content-area" id="tasksSection">
+          <div class="task-list-panel">
+            <div class="panel-header"><h2>任务列表</h2><span id="updatedAt">等待数据</span></div>
+            <div class="table-scroll">
               <table>
                 <thead><tr><th>任务名称</th><th>状态</th><th>进度</th><th>最近成功</th><th>操作</th></tr></thead>
-                <tbody id="任务表格"></tbody>
+                <tbody id="taskTable"></tbody>
               </table>
             </div>
           </div>
 
-          <aside class="详情面板">
-            <div class="面板标题"><h2 id="详情标题">选择任务</h2><button class="图标按钮" id="关闭详情">×</button></div>
-            <div id="详情内容" class="详情内容 空状态">请从左侧选择一个任务</div>
+          <aside class="detail-panel">
+            <div class="panel-header"><h2 id="detailTitle">选择任务</h2><button class="icon-button" id="closeDetails">×</button></div>
+            <div id="detailContent" class="detail-content empty-state">请从左侧选择一个任务</div>
           </aside>
         </section>
 
-        <section class="日志区域 隐藏" id="日志区域">
-          <div class="日志头部"><h2>最近日志</h2><button class="次要按钮" id="刷新日志">刷新</button></div>
-          <pre id="日志内容">暂无日志</pre>
+        <section class="logs-section hidden" id="logsSection">
+          <div class="log-header"><h2>最近日志</h2><button class="secondary-button" id="refreshLogsButton">刷新</button></div>
+          <pre id="logsContent">暂无日志</pre>
         </section>
 
-        <section class="设置区域 隐藏" id="设置区域">
-          <div class="日志头部"><h2>全局配置</h2><button class="主要按钮" id="保存全局配置">保存全局配置</button></div>
-          <div class="设置表单">
-            <div class="详情字段"><label>日志级别</label><select id="全局日志级别"><option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
-            <div class="详情字段"><label>Webhook 端口（重启后生效）</label><input id="全局端口" type="number" min="1" max="65535"></div>
-            <div class="详情字段"><label>任务完成后执行系统动作</label><select id="全局完成开关"><option value="true">启用</option><option value="false">禁用</option></select></div>
-            <div class="详情字段"><label>完成动作延迟（秒）</label><input id="全局延迟" type="number" min="0"></div>
-            <div class="详情字段"><label>自动化超时（小时）</label><input id="全局超时" type="number" min="0.1" step="0.1"></div>
-            <div class="详情字段"><label>完成动作</label><select id="全局完成动作"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
-            <div class="详情字段"><label>Server 酱 SendKey（留空保持原值）</label><input id="全局SendKey" type="password" autocomplete="new-password" placeholder="已配置时不会回显"></div>
-            <div class="详情字段"><label><input id="清除SendKey" type="checkbox"> 清除已保存的 SendKey</label></div>
+        <section class="settings-section hidden" id="settingsSection">
+          <div class="log-header"><h2>全局配置</h2><button class="primary-button" id="saveSystemConfigButton">保存全局配置</button></div>
+          <div class="settings-form">
+            <div class="detail-field"><label>日志级别</label><select id="systemLogLevel"><option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
+            <div class="detail-field"><label>Webhook 端口（重启后生效）</label><input id="systemPort" type="number" min="1" max="65535"></div>
+            <div class="detail-field"><label>任务完成后执行系统动作</label><select id="systemCompletionEnabled"><option value="true">启用</option><option value="false">禁用</option></select></div>
+            <div class="detail-field"><label>完成动作延迟（秒）</label><input id="systemDelay" type="number" min="0"></div>
+            <div class="detail-field"><label>自动化超时（小时）</label><input id="systemTimeout" type="number" min="0.1" step="0.1"></div>
+            <div class="detail-field"><label>完成动作</label><select id="systemCompletionAction"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
+            <div class="detail-field"><label>Server 酱 SendKey（留空保持原值）</label><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="已配置时不会回显"></div>
+            <div class="detail-field"><label><input id="clearSendKey" type="checkbox"> 清除已保存的 SendKey</label></div>
           </div>
-          <div class="说明卡片">
+          <div class="info-card">
             <p>普通用户模式：直接运行 <code>python main.py</code>，只打开桌面，不会自动启动任务。</p>
             <p>自动化模式：运行 <code>python main.py --automation</code>，按间隔自动扫描到期任务。</p>
             <p>任务和全局配置保存后会直接写入 <code>config.yaml</code>，程序会校验、备份并重新加载。</p>
@@ -78,7 +78,7 @@
         </section>
       </main>
     </div>
-    <div id="提示框" class="提示框"></div>
+    <div id="toast" class="toast"></div>
     <script src="/ui/app.js"></script>
   </body>
 </html>

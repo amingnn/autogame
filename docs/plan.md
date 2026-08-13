@@ -55,7 +55,7 @@ MAA 等待 Webhook 时仍保持 `running`，通过 `waiting_for_callback` 和页
 - 临时文件原子替换；
 - Pydantic 校验后重新加载。
 
-旧配置启动时由 `迁移旧版配置()` 自动转换，无法识别的未知入口会拒绝迁移并保留原文件。
+旧配置启动时由 `migrate_legacy_config()` 自动转换，无法识别的未知入口会拒绝迁移并保留原文件。
 
 ### 日志
 

@@ -9,14 +9,14 @@ from pathlib import Path
 import uvicorn
 
 from core.common import Config
-from core.config_store import 迁移旧版配置
+from core.config_store import migrate_legacy_config
 from core.logger import configure_logging, mlog
 from core.scheduler import Scheduler
 from desktop import run_desktop_app
 from webhook import create_app
 
 
-def _解析启动参数() -> argparse.Namespace:
+def _parse_args() -> argparse.Namespace:
     """解析唯一的自动化启动参数。"""
 
     parser = argparse.ArgumentParser(description="AutoGame 自动化任务程序")
@@ -28,7 +28,7 @@ def _解析启动参数() -> argparse.Namespace:
     return parser.parse_args()
 
 
-async def _运行自动化(config: Config) -> None:
+async def _run_automation(config: Config) -> None:
     """启动无界面 FastAPI 服务和任务调度器。"""
 
     scheduler = Scheduler(config, auto_shutdown=True, auto_schedule=True)
@@ -84,15 +84,15 @@ async def _运行自动化(config: Config) -> None:
 def main() -> None:
     """根据启动参数进入桌面模式或自动化模式。"""
 
-    arguments = _解析启动参数()
+    arguments = _parse_args()
     config_path = Path(__file__).resolve().parent / "config.yaml"
-    迁移旧版配置(config_path)
+    migrate_legacy_config(config_path)
     config = Config.load(config_path)
     configure_logging(config.log_dir, config.system.log_level, force=True)
     mlog.info("配置加载完成，Webhook 端口：{}", config.system.webhook_port)
 
     if arguments.automation:
-        asyncio.run(_运行自动化(config))
+        asyncio.run(_run_automation(config))
     else:
         run_desktop_app(config)
 

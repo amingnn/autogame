@@ -14,7 +14,7 @@ from core.common import LauncherConfig
 from core.logger import mlog
 
 
-def _匹配进程(process: psutil.Process, process_name: str) -> bool:
+def _matches_process(process: psutil.Process, process_name: str) -> bool:
     """按进程名匹配目标进程。"""
 
     try:
@@ -24,17 +24,17 @@ def _匹配进程(process: psutil.Process, process_name: str) -> bool:
     return actual_name.casefold() == Path(process_name).name.casefold()
 
 
-def _查找进程(process_name: str) -> list[psutil.Process]:
+def _find_processes(process_name: str) -> list[psutil.Process]:
     """返回当前所有匹配进程。"""
 
     result: list[psutil.Process] = []
     for process in psutil.process_iter(["name"]):
-        if _匹配进程(process, process_name):
+        if _matches_process(process, process_name):
             result.append(process)
     return result
 
 
-def _获取进程创建时间(process: psutil.Process) -> float | None:
+def _get_process_create_time(process: psutil.Process) -> float | None:
     """读取进程创建时间，用于排除启动前就存在的同名进程。"""
 
     try:
@@ -43,7 +43,7 @@ def _获取进程创建时间(process: psutil.Process) -> float | None:
         return None
 
 
-def _停止已有进程(processes: list[psutil.Process], process_name: str) -> None:
+def _stop_existing_processes(processes: list[psutil.Process], process_name: str) -> None:
     """停止旧进程，确保本次启动能够被识别为真实启动。"""
 
     if not processes:
@@ -67,23 +67,23 @@ def _停止已有进程(processes: list[psutil.Process], process_name: str) -> N
 
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
-        remaining = _查找进程(process_name)
+        remaining = _find_processes(process_name)
         if not remaining:
             return
         time.sleep(0.1)
 
-    remaining = _查找进程(process_name)
+    remaining = _find_processes(process_name)
     for process in remaining:
         try:
             process.kill()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-    if _查找进程(process_name):
+    if _find_processes(process_name):
         raise RuntimeError(f"无法停止旧的目标进程：{process_name}")
 
 
-def _启动并验证同步(launcher: LauncherConfig) -> None:
+def _start_and_verify_sync(launcher: LauncherConfig) -> None:
     """启动应用并在限定时间内确认目标进程真实存在。"""
 
     path = Path(launcher.path)
@@ -91,17 +91,17 @@ def _启动并验证同步(launcher: LauncherConfig) -> None:
         raise FileNotFoundError(f"应用启动路径不存在：{path}")
 
     before = {
-        process.pid: _获取进程创建时间(process)
-        for process in _查找进程(launcher.process_name)
+        process.pid: _get_process_create_time(process)
+        for process in _find_processes(launcher.process_name)
     }
     if before:
         if not launcher.restart_existing:
             mlog.info("目标进程已存在，按配置复用：{}", launcher.process_name)
             return
-        _停止已有进程(
+        _stop_existing_processes(
             [
                 process
-                for process in _查找进程(launcher.process_name)
+                for process in _find_processes(launcher.process_name)
                 if process.pid in before
             ],
             launcher.process_name,
@@ -119,11 +119,11 @@ def _启动并验证同步(launcher: LauncherConfig) -> None:
 
     deadline = time.monotonic() + launcher.startup_timeout_seconds
     while time.monotonic() < deadline:
-        processes = _查找进程(launcher.process_name)
+        processes = _find_processes(launcher.process_name)
         if any(
             process.pid not in before
             and (
-                (created_at := _获取进程创建时间(process)) is not None
+                (created_at := _get_process_create_time(process)) is not None
                 and created_at >= launch_started_at
             )
             for process in processes
@@ -138,9 +138,9 @@ def _启动并验证同步(launcher: LauncherConfig) -> None:
     )
 
 
-async def 启动并验证(launcher: LauncherConfig) -> None:
+async def start_and_verify(launcher: LauncherConfig) -> None:
     """在线程池中启动应用，避免阻塞异步 API。"""
 
     if launcher.type == "none":
         return
-    await asyncio.to_thread(_启动并验证同步, launcher)
+    await asyncio.to_thread(_start_and_verify_sync, launcher)

@@ -19,7 +19,7 @@ TaskState = Literal[
 ]
 
 
-def 转换时间(value: datetime | None) -> str | None:
+def format_datetime(value: datetime | None) -> str | None:
     """把时间转换为带 UTC 时区的 ISO 8601 字符串。"""
 
     if value is None:
@@ -54,9 +54,9 @@ class TaskRuntime:
         return {
             "name": self.name,
             "state": self.state,
-            "started_at": 转换时间(self.started_at),
-            "finished_at": 转换时间(self.finished_at),
-            "last_success_at": 转换时间(self.last_success_at),
+            "started_at": format_datetime(self.started_at),
+            "finished_at": format_datetime(self.finished_at),
+            "last_success_at": format_datetime(self.last_success_at),
             "last_error": self.last_error,
             "waiting_for_callback": self.waiting_for_callback,
         }
