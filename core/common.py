@@ -1,81 +1,83 @@
-from pathlib import Path
-from typing import Any, Literal
+"""定义项目配置模型，并负责读取配置文件。"""
 
-from pydantic import BaseModel, model_validator
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Literal
+
 import yaml
+from pydantic import BaseModel, Field, model_validator
+
+
+def _project_root() -> Path:
+    """返回项目根目录。"""
+
+    return Path(__file__).resolve().parent.parent
 
 
 class SystemConfig(BaseModel):
+    """系统级运行配置。"""
+
     log_level: str = "INFO"
-    webhook_port: int = 8000
+    webhook_port: int = Field(default=8000, ge=1, le=65535)
     shutdown_on_complete: bool = True
-    shutdown_delay_seconds: int = 60
-    shutdown_timeout_hours: float = 1.5
-    completion_action: Literal["shutdown", "sleep", "none"] = "sleep"
+    shutdown_delay_seconds: int = Field(default=60, ge=0, le=86400)
+    shutdown_timeout_hours: float = Field(default=1.5, gt=0, le=168)
+    completion_action: Literal["shutdown", "sleep", "none", "hibernate"] = "sleep"
     server_chan_key: str = ""
 
 
-class TaskConfig(BaseModel):
-    enabled: bool = False
-    interval_hours: float = 24.0
-    # tasks/ 内的 module.function 路径，例如 "skyland_sign.skyland.start"
-    # 留空表示无 Python 入口（纯 webhook 驱动任务，如 maa）
-    entry: str = ""
-    # 配置文档字段，描述该任务开始时机的语义（调度器不区分，仅供阅读）
-    # "entry"：entry 函数被调用时即为任务开始
-    # "run"  ：轮询触发时即为开始（entry 为空的任务，如 maa）
-    start_on: Literal["entry", "run"] = "entry"
-    # "entry"  ：entry 函数返回即视为完成
-    # "webhook"：等待外部 webhook 回调才算完成
-    done_on: Literal["entry", "webhook"] = "entry"
+class LauncherConfig(BaseModel):
+    """任务启动方式配置。"""
 
-    @model_validator(mode="before")
-    @classmethod
-    def _compat_webhook_notify(cls, data: Any) -> Any:
-        """兼容旧版 webhook_notify 字段。"""
-        if isinstance(data, dict) and "webhook_notify" in data and "done_on" not in data:
-            data = dict(data)
-            data["done_on"] = "webhook" if data.pop("webhook_notify") else "entry"
-        elif isinstance(data, dict):
-            data.pop("webhook_notify", None)
-        return data
+    type: Literal["none", "application"] = "none"
+    path: str = ""
+    process_name: str = ""
+    startup_timeout_seconds: float = Field(default=15.0, ge=1, le=300)
+
+    @model_validator(mode="after")
+    def _校验应用启动配置(self) -> "LauncherConfig":
+        """应用启动方式必须同时提供路径和进程名。"""
+
+        if self.type == "application" and (not self.path or not self.process_name):
+            raise ValueError("application 启动方式必须提供 path 和 process_name")
+        return self
+
+
+class TaskConfig(BaseModel):
+    """单个自动化任务的配置。"""
+
+    enabled: bool = False
+    interval_hours: float = Field(default=24.0, ge=0)
+    launcher: LauncherConfig = Field(default_factory=LauncherConfig)
 
 
 class Config(BaseModel):
-    # root 和 cfg_path 不能更改
-    root: Path = Path(__file__).resolve().parent.parent
-    cfg_path: Path = root / "config.yaml"
-    log_dir: Path = root / "logs"
-    db_path: Path = root / "state.json"
+    """项目完整配置。"""
 
-    system: SystemConfig = SystemConfig()
-    tasks: dict[str, TaskConfig] = {}
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce_tasks(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "tasks" in data:
-            raw = data["tasks"]
-            if isinstance(raw, dict):
-                data["tasks"] = {
-                    k: TaskConfig(**v) if isinstance(v, dict) else v
-                    for k, v in raw.items()
-                }
-        return data
+    root: Path = Field(default_factory=_project_root)
+    cfg_path: Path = Field(default_factory=lambda: _project_root() / "config.yaml")
+    log_dir: Path = Field(default_factory=lambda: _project_root() / "logs")
+    db_path: Path = Field(default_factory=lambda: _project_root() / "state.json")
+    system: SystemConfig = Field(default_factory=SystemConfig)
+    tasks: dict[str, TaskConfig] = Field(default_factory=dict)
 
     @classmethod
-    def load(cls) -> "Config":
-        defaults = cls()
-        if not defaults.cfg_path.exists():
-            return defaults
-        with open(defaults.cfg_path, mode="r", encoding="utf-8") as f:
-            file_data = yaml.safe_load(f) or {}
-        # 通过构造器重新走完整的验证流程
-        return cls(**file_data)
+    def load(cls, path: Path | None = None) -> "Config":
+        """从 YAML 文件读取并校验配置。"""
+
+        default = cls()
+        config_path = Path(path) if path else default.cfg_path
+        if not config_path.exists():
+            return default.model_copy(update={"cfg_path": config_path})
+
+        with config_path.open("r", encoding="utf-8") as stream:
+            raw = yaml.safe_load(stream) or {}
+        if not isinstance(raw, dict):
+            raise ValueError("配置文件的顶层必须是对象")
+        raw = dict(raw)
+        raw["cfg_path"] = config_path
+        return cls.model_validate(raw)
 
 
 cfg = Config.load()
-
-if __name__ == "__main__":
-    from rich import print
-    print(cfg)

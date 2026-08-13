@@ -1,8 +1,9 @@
 import hashlib
 import hmac
 import json
-import logging
-sky_logger = logging.getLogger("skyland")
+from loguru import logger
+
+sky_logger = logger.bind(component="skyland")
 import os.path
 import sys
 import threading
@@ -360,7 +361,7 @@ def start():
                 success = False
         except Exception as ex:
             err = f'签到失败，原因：{str(ex)}'
-            sky_logger.error(err, exc_info=ex)
+            sky_logger.exception(err)
             all_logs.append(err)
             success = False
     sky_logger.info("签到完成！")

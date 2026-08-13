@@ -220,6 +220,9 @@ __marimo__/
 
 # 本地配置与敏感数据（不提交）
 config.yaml
+config.yaml.bak
+config.yaml.lock
+config.yaml.tmp
 state.json
 logs/
 tasks/skyland_sign/TOKEN.txt

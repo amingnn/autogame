@@ -10,21 +10,24 @@ system:
 tasks:
   skyland_sign:
     enabled: true
-    interval_hours: 24           # 每天 1 次（24h 冷却）
-    entry: "skyland_sign.skyland.start"  # tasks/ 内 module.function 路径
-    start_on: "entry"                    # entry 函数调用时记录开始
-    done_on: "entry"                     # entry 返回即完成
+    interval_hours: 24           # 按间隔执行
+    launcher:
+      type: "none"               # 内置签到任务，不启动外部应用
 
   maa:
     enabled: true
-    interval_hours: 12           # 每天 2 次（12h 冷却）
-    entry: "maa.run"                     # 启动 MAA
-    start_on: "entry"                    # entry 函数调用时记录开始
-    done_on: "webhook"                   # POST /maa 回调后完成
+    interval_hours: 12
+    launcher:
+      type: "application"
+      path: "D:\\OneDrive\\win\\桌面\\MAA.exe.lnk"
+      process_name: "MAA.exe"
+      startup_timeout_seconds: 15
 
   maaend:
     enabled: true
-    interval_hours: 12           # 每天 2 次（12h 冷却）
-    entry: "maaend.run"                  # 启动 MAAEnd.exe
-    start_on: "entry"
-    done_on: "webhook"                   # GET /maa 回调后完成
+    interval_hours: 12
+    launcher:
+      type: "application"
+      path: "D:\\OneDrive\\win\\桌面\\MaaEnd.exe.lnk"
+      process_name: "MaaEnd.exe"
+      startup_timeout_seconds: 15

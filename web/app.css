@@ -1,0 +1,64 @@
+:root {
+  color-scheme: dark;
+  --背景: #151a20;
+  --面板: #1d232b;
+  --面板浅: #242b34;
+  --边框: #333b46;
+  --文字: #f0f3f7;
+  --次要文字: #929ca9;
+  --蓝色: #2587f5;
+  --绿色: #43c66b;
+  --黄色: #e4aa3d;
+  --红色: #eb625c;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 960px; background: var(--背景); color: var(--文字); font: 14px "Microsoft YaHei", "Segoe UI", sans-serif; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.应用外壳 { display: flex; min-height: 100vh; }
+.侧栏 { width: 220px; padding: 24px 14px 18px; display: flex; flex-direction: column; background: #171c22; border-right: 1px solid var(--边框); }
+.品牌 { display: flex; align-items: center; gap: 10px; padding: 0 12px 34px; font-size: 20px; font-weight: 700; }
+.品牌标记 { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--蓝色); }
+nav { display: grid; gap: 8px; }
+.导航项 { width: 100%; padding: 13px 14px; border: 0; border-radius: 8px; color: var(--次要文字); background: transparent; text-align: left; }
+.导航项 span { display: inline-block; width: 28px; color: currentColor; }
+.导航项:hover, .导航项.active { color: var(--文字); background: var(--面板浅); box-shadow: inset 3px 0 var(--蓝色); }
+.连接状态 { display: flex; align-items: center; gap: 9px; margin-top: auto; padding: 14px 12px 0; color: var(--次要文字); border-top: 1px solid var(--边框); }
+.状态圆点 { width: 8px; height: 8px; border-radius: 50%; background: var(--绿色); box-shadow: 0 0 9px var(--绿色); }
+.主区域 { flex: 1; padding: 30px 32px; overflow: auto; }
+.顶部栏, .面板标题, .日志头部 { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.眉标题 { margin: 0 0 6px; color: var(--次要文字); font-size: 12px; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: 30px; }
+h2 { margin-bottom: 0; font-size: 17px; }
+.顶部操作 { display: flex; gap: 10px; }
+.主要按钮, .次要按钮, .危险按钮, .图标按钮 { border: 1px solid transparent; border-radius: 7px; padding: 10px 15px; color: var(--文字); }
+.主要按钮 { background: var(--蓝色); }
+.主要按钮:hover { background: #4098fa; }
+.次要按钮, .图标按钮 { background: var(--面板浅); border-color: var(--边框); }
+.危险按钮 { background: #542a2c; color: #ffaaa5; }
+.图标按钮 { padding: 4px 10px; font-size: 20px; }
+.统计卡片 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 28px 0 22px; }
+.统计卡片项 { display: flex; align-items: center; gap: 17px; padding: 20px; background: var(--面板); border: 1px solid var(--边框); border-radius: 9px; }
+.统计图标 { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; font-size: 22px; background: #27303a; }
+.统计图标.蓝色 { color: #55a9ff; }.统计图标.绿色 { color: var(--绿色); }.统计图标.紫色 { color: #a885ff; }
+.统计卡片-item strong, .统计卡片项 strong { display: block; font-size: 26px; }.统计卡片项 span:last-child { color: var(--次要文字); }
+.内容区 { display: grid; grid-template-columns: minmax(560px, 1fr) 320px; gap: 18px; }
+.任务列表面板, .详情面板, .日志区域, .设置区域 { background: var(--面板); border: 1px solid var(--边框); border-radius: 9px; }
+.任务列表面板 { min-height: 540px; overflow: hidden; }.面板标题, .日志头部 { padding: 18px 20px; border-bottom: 1px solid var(--边框); }
+.面板标题 span { color: var(--次要文字); font-size: 12px; }
+.表格滚动区 { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }.表格滚动区 th, .表格滚动区 td { padding: 16px 20px; border-bottom: 1px solid #2b333d; text-align: left; white-space: nowrap; }
+th { color: var(--次要文字); font-size: 12px; font-weight: 500; } tr.选中 { background: #252e38; } tbody tr { transition: background .15s; } tbody tr:hover { background: #222a33; }
+.状态标签 { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px; font-size: 12px; }.状态标签.绿色 { color: #7de19a; background: #183a28; }.状态标签.黄色 { color: #f1c467; background: #44371d; }.状态标签.红色 { color: #ff958f; background: #492427; }.状态标签.灰色 { color: #aab3bf; background: #303740; }.状态标签.蓝色 { color: #85c4ff; background: #183a5b; }
+.进度条 { display: inline-block; width: 74px; height: 7px; overflow: hidden; vertical-align: middle; border-radius: 8px; background: #343c46; }.进度条 > i { display: block; height: 100%; border-radius: inherit; background: var(--绿色); }
+.行操作 { display: flex; gap: 5px; }.行操作 button { padding: 5px 8px; color: var(--文字); background: transparent; border: 0; border-radius: 5px; }.行操作 button:hover { background: #3a4551; }
+.详情面板 { min-height: 540px; }.详情内容 { padding: 20px; }.空状态 { color: var(--次要文字); line-height: 1.8; }.详情状态 { margin-bottom: 22px; }.详情字段 { display: grid; gap: 5px; margin-bottom: 16px; }.详情字段 label { color: var(--次要文字); font-size: 12px; }.详情字段 input, .详情字段 select { width: 100%; padding: 9px 10px; color: var(--文字); background: #171c22; border: 1px solid var(--边框); border-radius: 6px; }.详情按钮组 { display: flex; gap: 8px; margin-top: 22px; }.详情按钮组 button { flex: 1; }
+.日志区域, .设置区域 { margin-top: 18px; }.日志区域 pre { min-height: 420px; margin: 0; padding: 20px; overflow: auto; color: #c9d3df; background: #14191e; font: 12px/1.7 Consolas, monospace; white-space: pre-wrap; }
+.说明卡片 { padding: 20px; color: var(--次要文字); line-height: 2; }.说明卡片 code { padding: 2px 5px; color: #a9d1ff; background: #27303a; border-radius: 4px; }
+.设置表单 { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 18px 24px; padding: 20px; }
+.设置表单 .详情字段 { margin-bottom: 0; }
+.设置表单 input[type="checkbox"] { width: auto; }
+.隐藏 { display: none; }.提示框 { position: fixed; right: 24px; bottom: 24px; max-width: 360px; padding: 12px 16px; border: 1px solid var(--边框); border-radius: 7px; color: var(--文字); background: #29333e; box-shadow: 0 8px 24px #0005; opacity: 0; pointer-events: none; transform: translateY(10px); transition: .2s; }.提示框.显示 { opacity: 1; transform: translateY(0); }
+@media (max-width: 1100px) { body { min-width: 760px; }.侧栏 { width: 180px; }.主区域 { padding: 24px 20px; }.内容区 { grid-template-columns: 1fr; }.详情面板 { min-height: 0; } }

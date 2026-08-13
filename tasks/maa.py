@@ -4,7 +4,10 @@ import subprocess
 
 path = Path(r"D:\OneDrive\win\桌面\MAA.exe.lnk")
 
+
 def run() -> None:
+    """启动 MAA 程序。"""
+
     if not path.exists():
         raise FileNotFoundError("MAA shortcut not found.")
 
