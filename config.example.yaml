@@ -1,35 +1,21 @@
 system:
   log_level: "INFO"
-  webhook_port: 8000
-  shutdown_on_complete: true
-  shutdown_delay_seconds: 60
-  shutdown_timeout_hours: 1.5   # 超时强制执行完成动作（小时）
-  completion_action: "sleep"    # 全部完成后 sleep / shutdown / none
+  automation_timeout_minutes: 90  # 自动化会话超时（分钟）
+  completion_action: "sleep"    # 全部完成后 sleep / shutdown / hibernate / none
+  completion_action_delay_seconds: 60
   server_chan_key: "your_key_here"  # Server酱 SendKey
 
 tasks:
   skyland_sign:
     enabled: true
     interval_hours: 24           # 按间隔执行
-    launcher:
-      type: "none"               # 内置签到任务，不启动外部应用
 
   maa:
     enabled: true
     interval_hours: 12
-    launcher:
-      type: "application"
-      path: "D:\\OneDrive\\win\\桌面\\MAA.exe.lnk"
-      process_name: "MAA.exe"
-      startup_timeout_seconds: 15
-      restart_existing: true
+    script_path: "D:\\game\\MAA-v6.13.0-win-x64\\MAA.exe"
 
   maaend:
     enabled: true
     interval_hours: 12
-    launcher:
-      type: "application"
-      path: "D:\\OneDrive\\win\\桌面\\MaaEnd.exe.lnk"
-      process_name: "MaaEnd.exe"
-      startup_timeout_seconds: 15
-      restart_existing: true
+    script_path: "D:\\game\\MaaEnd-win-x86_64-v2.18.0\\MaaEnd.exe"

@@ -223,6 +223,5 @@ config.yaml
 config.yaml.bak
 config.yaml.lock
 config.yaml.tmp
-state.json
 logs/
-tasks/skyland_sign/TOKEN.txt
+data/

@@ -1,75 +1,119 @@
-# AutoGame 任务生命周期重构实施计划
+# AutoGame 最终重构计划与实施结果
 
 ## 目标
 
-本次重构解决桌面启动误执行、任务状态不清晰、配置无法通过页面管理以及入口配置过于自由的问题。
+- `python main.py` 只启动桌面，不自动运行任务；
+- `python main.py --automation` 运行一次无界面自动化会话；
+- 桌面和自动化只共享任务核心，彼此不导入；
+- 删除 FastAPI、Uvicorn、Webhook 和本地端口；
+- 任务实现统一归入 `autogame/tasks/`；
+- 运行数据移出源码包；
+- 防止桌面、计划任务和重复自动化进程并发执行同一任务；
+- 保持 Loguru 七日日志和安全配置保存。
 
-最终运行方式：
+## 已完成
 
-```powershell
-# 桌面管理：只启动桌面，不自动启动任务
-python main.py
+### 1. 任务目录收敛
 
-# 自动化运行：启动调度器并按 interval_hours 扫描到期任务
-python main.py --automation
-```
+- 删除顶层 `tasks/` 和独立 `adapters/`；
+- 通用任务协议迁入 `autogame/tasks/base.py`；
+- 外部脚本生命周期迁入 `autogame/tasks/process_script.py`；
+- MAA、MaaEnd 和森空岛全部由 `registry.py` 注册；
+- 森空岛拆分为适配器、业务服务、HTTP 客户端、Token 存储和签名实现。
 
-本版本继续使用间隔小时调度，暂不实现每天次数调度。
+### 2. 桌面和自动化解耦
 
-## 已实施改动
+- 原 `Scheduler` 拆分为 `TaskManager` 和 `AutomationRunner`；
+- `main.py` 根据参数延迟导入入口模块；
+- 自动化模式不导入 pywebview；
+- 桌面模式不创建自动扫描器或电源控制器；
+- pywebview 页面通过 `DesktopBridge` 直接调用 Python。
 
-### 启动模式
+### 3. 删除本地 Web 服务
 
-- `desktop/app.py` 创建的 Scheduler 使用 `auto_schedule=False`；
-- 桌面后端只运行本地 FastAPI 和 pywebview，不启动轮询和超时监控任务；
-- `main.py --automation` 使用 `auto_schedule=True`，调度器每 30 秒扫描一次到期任务；
-- 页面点击运行和 `/trigger` 仍然可以手动启动任务。
+- 删除 `autogame/api.py`；
+- 移除 FastAPI、Uvicorn 和 httpx 依赖；
+- 删除所有管理 HTTP 接口；
+- 删除 `webhook_port` 配置；
+- 页面不再使用 `fetch()`；
+- 不再占用本地端口。
 
-### 任务模型
+### 4. 运行能力拆分
 
-任务配置删除 `entry`、`start_on`、`done_on`，改用 `launcher`：
+新增 `autogame/runtime/`：
 
-- `type: none` 表示无外部应用；
-- `type: application` 表示启动 `.exe` 或 `.lnk`，并验证目标进程名；
-- `core/task_registry.py` 固定任务业务行为和完成信号，避免从 YAML 动态导入任意函数。
+- `process.py`：启动、验证和停止 Windows 进程；
+- `log_reader.py`：增量读取脚本日志；
+- `state_store.py`：加锁并原子保存成功时间；
+- `execution_lock.py`：自动化实例锁和任务锁；
+- `power.py`：异步执行完成后的电源策略。
 
-### 状态模型
+### 5. 外部脚本流程
 
-状态为：
+MAA：
 
 ```text
-disabled / cooldown / pending / starting / running
-completed / failed / timed_out
+启动/复用 MuMu -> 新启动时等待 20 秒 -> 启动 MAA
+-> 读取 gui.log -> 清洗任务和专精日志 -> 检测整轮完成标记
 ```
 
-MAA 等待 Webhook 时仍保持 `running`，通过 `waiting_for_callback` 和页面说明显示正在等待回调。
+MaaEnd：
 
-### 配置管理
+```text
+启动/复用终末地 -> 新启动时等待 20 秒 -> 启动 MaaEnd
+-> 读取 maafw/go-service 日志 -> 检测结束进程任务或日志静默
+```
 
-页面可以保存任务配置和全部可运行的全局配置。配置保存具备：
+游戏进程允许复用；脚本进程发现同路径旧实例时先关闭再重启。所有到期任务并发启动，全部成功后才执行完成动作。
 
-- 文件锁；
-- SHA-256 版本冲突检测；
-- YAML 注释保留；
-- `.bak` 备份；
-- 临时文件原子替换；
-- Pydantic 校验后重新加载。
+### 6. 配置和运行数据
 
-旧配置启动时由 `migrate_legacy_config()` 自动转换，无法识别的未知入口会拒绝迁移并保留原文件。
+- 正式配置只删除已失去用途的 `webhook_port`；
+- 其他当前电脑配置值保持不变；
+- `config.yaml.bak` 保留迁移前配置；
+- 配置保存继续使用文件锁、版本检查、注释保留、备份和原子替换；
+- `state.json` 迁移到 `data/state.json`；
+- 森空岛 Token 迁移到 `data/skyland_sign/token.txt`；
+- 锁文件统一放入 `data/locks/`。
 
-### 日志
+### 7. 依赖
 
-统一使用 Loguru，主日志和通知日志按天轮转，并通过 `retention="7 days"` 与启动清理共同保证只保留最近七天。
+基础自动化依赖不包含桌面库。pywebview 使用 `desktop` 可选依赖：
+
+```powershell
+uv sync --extra desktop
+```
+
+自动化环境只需：
+
+```powershell
+uv sync
+```
+
+### 8. Windows 计划任务
+
+计划任务执行入口保持：
+
+```powershell
+uv run python main.py --automation
+```
+
+维护脚本对已有任务只更新执行动作，保留电脑现有触发器、账户和其他设置；创建新任务时使用 07:00 和 19:00 两个时间点。
 
 ## 验收结果
 
-当前测试覆盖：
+- 桌面后台启动不会调用任务启动器；
+- 自动化入口不会导入桌面包；
+- 页面不包含 HTTP 请求；
+- 配置不再接受 `webhook_port`；
+- SendKey 不会出现在桌面状态结果；
+- 状态文件可原子合并多个任务成功时间；
+- 同名跨进程任务锁能阻止重复运行；
+- MAA 完成标记和 MaaEnd 业务日志解析正常；
+- MAA 任务错误只记录为 `【ERR】` INFO 日志，不影响整轮完成；
+- MaaEnd 支持结束进程标志和十分钟日志静默兜底；
+- 到期任务并发启动，失败或超时时不会执行系统完成动作；
+- Loguru 会清理七天以前的日志；
+- 当前自动化测试全部通过。
 
-- 内置任务 `starting -> running -> completed` 的完成路径；
-- 应用启动后等待回调，回调完成和重复回调忽略；
-- 桌面 Scheduler 不执行自动扫描；
-- YAML 注释、备份、配置迁移；
-- 任务配置、全局配置、版本冲突 API；
-- SendKey 不出现在状态接口中；
-- 正式 `config.yaml` 使用新启动器模型加载成功；
-- Python 编译检查和主入口 `--help` 检查。
+具体目录、运行流程、类和公共函数以 [架构文档](architecture.md) 为准。

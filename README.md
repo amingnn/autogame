@@ -1,110 +1,115 @@
 # AutoGame
 
-AutoGame 是一个配置驱动的 Windows 游戏自动化任务程序，默认提供 pywebview 桌面管理窗口，同时保留无界面自动化运行能力。
-
-## 启动
-
-普通用户运行桌面模式：
-
-```powershell
-uv run python main.py
-```
-
-桌面模式只启动窗口、状态服务和 Webhook 接收服务，不会自动启动任何脚本。任务必须由页面点击“运行”，或者由外部 `/trigger` 请求触发。
-
-自动化脚本运行：
-
-```powershell
-uv run python main.py --automation
-```
-
-自动化模式按任务的 `interval_hours` 周期扫描到期任务，不打开桌面窗口。任务全部完成后按照全局配置执行退出、睡眠、休眠或关机动作。
+AutoGame 是一个配置驱动的 Windows 游戏自动化任务管理器，提供 pywebview 桌面管理和无界面计划任务模式。
 
 ## 安装
+
+安装桌面版及全部运行依赖：
+
+```powershell
+uv sync --extra desktop
+```
+
+只用于无界面自动化时不需要安装桌面依赖：
 
 ```powershell
 uv sync
 ```
 
-首次使用森空岛签到任务时，可以手动运行：
+## 启动
+
+桌面模式：
 
 ```powershell
-uv run python tasks/skyland_sign/skyland.py
+uv run --extra desktop python main.py
 ```
 
-登录生成的 Token 只保存在本地任务目录，不提交到版本库。
+桌面模式只打开管理窗口，不扫描或自动启动任务。任务必须由页面手动运行。
+
+无界面自动化模式：
+
+```powershell
+uv run python main.py --automation
+```
+
+自动化模式只扫描本次启动时已经达到 `interval_hours` 的任务，并发启动后等待全部任务结束。只有所有到期任务成功时才执行完成动作。它不会导入 pywebview、读取页面、启动本地服务或占用端口。
 
 ## 配置
 
-正式配置文件为 `config.yaml`，模板为 `config.example.yaml`。页面保存会保留 YAML 注释，并使用文件锁、版本校验、`.bak` 备份和原子替换。
+正式配置为 `config.yaml`，模板为 `config.example.yaml`。桌面保存配置时会保留 YAML 注释、创建 `.bak`、检查版本冲突并原子替换文件。
 
-全局配置包括：
-
-- 日志级别、Webhook 端口；
-- 自动化超时时间；
-- 任务完成后的电源动作和延迟；
-- Server 酱 SendKey。页面不会回显 SendKey，留空表示保持原值，勾选清除才会删除。
-
-任务配置包括：
+任务配置示例：
 
 ```yaml
 tasks:
   skyland_sign:
     enabled: true
     interval_hours: 20
-    launcher:
-      type: "none"
+
   maa:
     enabled: true
     interval_hours: 3
-    launcher:
-      type: "application"
-      path: "D:\\OneDrive\\win\\桌面\\MAA.exe.lnk"
-      process_name: "MAA.exe"
-      startup_timeout_seconds: 15
+    script_path: "D:\\game\\MAA-v6.13.0-win-x64\\MAA.exe"
+
+  maaend:
+    enabled: true
+    interval_hours: 20
+    script_path: "D:\\game\\MaaEnd-win-x86_64-v2.18.0\\MaaEnd.exe"
 ```
 
-不再使用 `entry`、`start_on`、`done_on`。旧配置启动时会自动备份并迁移；未知 Python 入口不会被自动执行。
+MAA 和 MaaEnd 只需配置脚本 exe。进程名、游戏启动路径、启动等待时间、debug 目录和日志规则由任务模块固定管理。
 
-## 任务模型
+自动化策略示例：
 
-- `skyland_sign`：无外部应用，运行内置签到函数，返回成功后完成；
-- `maa`：启动并验证 `MAA.exe`，状态保持为运行中，收到 POST `/maa` 后完成；
-- `maaend`：启动并验证 `MaaEnd.exe`，状态保持为运行中，收到 GET `/maa` 后完成。
+```yaml
+system:
+  automation_timeout_minutes: 30
+  completion_action: "hibernate"
+  completion_action_delay_seconds: 60
+```
 
-任务状态为：`disabled`、`cooldown`、`pending`、`starting`、`running`、`completed`、`failed`、`timed_out`。
+`completion_action: "none"` 表示完成后不执行系统动作。
 
-## 接口
+## 任务流程
 
-外部兼容接口：
+- `skyland_sign`：在项目进程内调用森空岛接口；
+- `maa`：启动 MuMu，等待游戏进程就绪，再启动 MAA，只读取 `debug/gui.log` 中的任务和专精信息；
+- `maaend`：启动终末地，等待游戏进程就绪，再启动 MaaEnd，监听 `debug/maafw*.log` 和 `debug/go-service.log`。
+
+外部脚本已有同路径旧实例时会先安全关闭再重新启动。MAA 读取到“任务已全部完成”后完成；“任务出错”只作为 `【ERR】` 业务日志展示。MaaEnd 以“结束进程”任务为完成标志，并保留十分钟有效业务日志静默兜底。不再使用 Webhook。
+
+任务状态：
 
 ```text
-POST /maa
-GET  /maa
-POST /trigger
+disabled / cooldown / pending / starting
+running / completed / failed / timed_out
 ```
 
-本机桌面管理接口：
+## 桌面通信
+
+页面通过 `window.pywebview.api` 直接调用 `DesktopBridge`，项目不再包含 FastAPI、Uvicorn、本地 HTTP API 或端口配置。
+
+桌面可以执行：
+
+- 查看任务状态和近期日志；
+- 手动运行或强制运行任务；
+- 修改任务启用状态、间隔和脚本路径；
+- 修改日志、通知和自动化完成策略；
+- 重载 `config.yaml`。
+
+## 运行数据
 
 ```text
-GET   /api/status
-POST  /api/tasks/{task_name}/run
-PATCH /api/tasks/{task_name}
-PATCH /api/config/system
-POST  /api/config/reload
-GET   /api/logs/recent
+data/state.json                  # 任务最近成功时间
+data/skyland_sign/token.txt      # 森空岛 Token
+data/locks/                      # 自动化实例锁和任务执行锁
+logs/YYYY-MM-DD.log              # 项目主日志
+logs/notify-YYYY-MM-DD.log       # 通知日志
 ```
 
-## 日志
+森空岛 Token 也可以通过 `TOKEN` 环境变量提供。运行数据和正式配置不会提交版本库。
 
-日志由 Loguru 管理，按天生成：
-
-```text
-logs/YYYY-MM-DD.log
-logs/notify-YYYY-MM-DD.log
-```
-
-启动时和 Loguru 轮转时均只保留最近七天日志。SendKey 不写入普通状态和日志内容。
+Loguru 日志按日轮转，启动时和轮转时都会清理七天以前的日志。
 
 ## Windows 计划任务
 
@@ -112,11 +117,11 @@ logs/notify-YYYY-MM-DD.log
 .\scripts\register-autogame-task.ps1
 ```
 
-注册脚本对已有任务只更新执行入口为 `python main.py --automation`，保留电脑现有的两个运行时间和其他计划任务设置。
+已有 AutoGame 计划任务只更新执行入口，保留当前电脑的触发器、账户和其他设置；新电脑默认创建 07:00 和 19:00 两个触发时间。
 
 ## 文档
 
-- [实施计划](docs/plan.md)
+- [实施计划和结果](docs/plan.md)
 - [项目架构说明](docs/architecture.md)
 
 ## 免责声明
