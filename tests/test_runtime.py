@@ -9,6 +9,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import psutil
+
 from autogame.config import TaskConfig
 from autogame.runtime.execution_lock import ExecutionLock
 from autogame.runtime.log_reader import IncrementalLogReader
@@ -66,6 +68,30 @@ class RuntimeTests(unittest.TestCase):
             return_value=[matching, different],
         ):
             result = find_processes("MaaEnd.exe", expected)
+
+        self.assertEqual(result, [matching])
+
+    def test_process_lookup_ignores_process_that_exits_during_lookup(self) -> None:
+        class VanishedProcess:
+            @property
+            def info(self) -> dict[str, str]:
+                raise psutil.NoSuchProcess(39856)
+
+        matching = SimpleNamespace(
+            info={
+                "name": "MaaEnd.exe",
+                "exe": "D:/game/MaaEnd/MaaEnd.exe",
+            }
+        )
+
+        with patch(
+            "autogame.runtime.process.psutil.process_iter",
+            return_value=[VanishedProcess(), matching],
+        ):
+            result = find_processes(
+                "MaaEnd.exe",
+                Path("D:/game/MaaEnd/MaaEnd.exe"),
+            )
 
         self.assertEqual(result, [matching])
 

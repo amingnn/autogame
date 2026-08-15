@@ -33,13 +33,14 @@ def find_processes(
     result: list[psutil.Process] = []
     for process in psutil.process_iter(["name", "exe"]):
         try:
-            actual = (process.info.get("name") or "").casefold()
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            info = process.info
+            actual = (info.get("name") or "").casefold()
+            actual_path = info.get("exe") if expected_path is not None else None
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
         if actual != expected:
             continue
         if expected_path is not None:
-            actual_path = process.info.get("exe")
             if not actual_path or _normalized_path(Path(actual_path)) != expected_path:
                 continue
         result.append(process)

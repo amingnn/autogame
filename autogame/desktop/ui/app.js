@@ -121,6 +121,7 @@ function renderSystemConfig() {
   document.getElementById("systemDelay").value = system.completion_action_delay_seconds;
   document.getElementById("systemTimeout").value = system.automation_timeout_minutes;
   document.getElementById("systemCompletionAction").value = system.completion_action;
+  document.getElementById("systemServerChanEnabled").checked = system.server_chan_enabled;
   document.getElementById("systemSendKey").placeholder = system.server_chan_key_configured ? "已配置，留空保持原值" : "未配置";
 }
 
@@ -163,6 +164,7 @@ async function saveSystemConfig() {
     completion_action_delay_seconds: Number(document.getElementById("systemDelay").value),
     automation_timeout_minutes: Number(document.getElementById("systemTimeout").value),
     completion_action: document.getElementById("systemCompletionAction").value,
+    server_chan_enabled: document.getElementById("systemServerChanEnabled").checked,
     clear_server_chan_key: document.getElementById("clearSendKey").checked,
     config_revision: currentState.config_revision,
   };

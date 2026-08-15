@@ -93,3 +93,9 @@ class DesktopTests(unittest.TestCase):
         ):
             main.main()
         self.assertNotIn("autogame.desktop", sys.modules)
+
+    def test_short_automation_argument(self) -> None:
+        with patch.object(sys, "argv", ["main.py", "-a"]):
+            arguments = main._parse_args()
+
+        self.assertTrue(arguments.automation)

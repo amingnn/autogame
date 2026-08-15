@@ -149,7 +149,7 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(await runner.run())
             self.assertEqual(started, {"first", "second"})
 
-    async def test_failed_task_prevents_completion_action(self) -> None:
+    async def test_failed_task_still_executes_completion_action(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = Config(
                 paths=AppPaths(root=Path(directory)),
@@ -171,7 +171,69 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
                 side_effect=definition,
             ):
                 self.assertFalse(await runner.run())
-            runner._power.execute.assert_not_awaited()  # type: ignore[attr-defined]
+            runner._power.execute.assert_awaited_once_with("hibernate", 60)  # type: ignore[attr-defined]
+
+    async def test_timed_out_task_still_executes_completion_action(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(
+                paths=AppPaths(root=Path(directory)),
+                system=SystemConfig(completion_action="hibernate"),
+                tasks={"long_running": TaskConfig(enabled=True)},
+            )
+            runner = AutomationRunner(config)
+            runner._power.execute = AsyncMock()  # type: ignore[method-assign]
+
+            class NeverEndingTask(PolledTask):
+                async def poll(
+                    self,
+                    context: TaskContext,
+                    handle: object,
+                ) -> AdapterResult:
+                    return AdapterResult("running", waiting_for_completion=True)
+
+            runner.manager.wait_for_tasks = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            definition = TaskDefinition(
+                "long_running",
+                lambda _config: NeverEndingTask(),
+                "持续运行",
+                False,
+            )
+
+            with patch(
+                "autogame.task_manager.get_task_definition",
+                return_value=definition,
+            ):
+                self.assertFalse(await runner.run())
+
+            runner._power.execute.assert_awaited_once_with("hibernate", 60)  # type: ignore[attr-defined]
+
+    async def test_disabled_server_chan_skips_notification(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(
+                paths=AppPaths(root=Path(directory)),
+                system=SystemConfig(
+                    completion_action="none",
+                    server_chan_enabled=False,
+                    server_chan_key="secret-value",
+                ),
+                tasks={"demo": TaskConfig(enabled=True)},
+            )
+            runner = AutomationRunner(config)
+            definition = TaskDefinition(
+                "demo",
+                lambda _config: ImmediateTask(),
+                "立即完成",
+                False,
+            )
+
+            with (
+                patch("autogame.task_manager.get_task_definition", return_value=definition),
+                patch("autogame.automation.runner.push_wechat") as push_wechat,
+                patch("autogame.automation.runner.report_sections"),
+            ):
+                self.assertTrue(await runner.run())
+
+            push_wechat.assert_not_called()
 
     async def test_successful_tasks_execute_action_and_report_details(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

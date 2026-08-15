@@ -78,22 +78,25 @@ class AutomationRunner:
             elapsed,
             timed_out=timed_out,
             completion_action_enabled=(
-                all_succeeded and self.config.system.completion_action != "none"
+                bool(targets) and self.config.system.completion_action != "none"
             ),
         )
         report_sections(notification_sections)
 
-        if self.config.system.server_chan_key:
+        if (
+            self.config.system.server_chan_enabled
+            and self.config.system.server_chan_key
+        ):
             push_wechat(self.config.system.server_chan_key)
-        if all_succeeded and self.config.system.completion_action != "none":
+        if targets and self.config.system.completion_action != "none":
+            if not all_succeeded:
+                mlog.warning("存在失败或超时任务，仍执行强制系统完成动作")
             await self._power.execute(
                 self.config.system.completion_action,
                 self.config.system.completion_action_delay_seconds,
             )
         elif not targets:
             mlog.info("没有到期任务，不执行系统完成动作")
-        elif not all_succeeded:
-            mlog.warning("存在失败或超时任务，不执行系统完成动作")
         else:
             mlog.info("完成动作配置为 none，不执行系统操作")
         return not targets or all_succeeded
@@ -167,8 +170,6 @@ class AutomationRunner:
             )
         elif not results:
             summary_section.append("完成后动作：未执行（没有到期任务）")
-        elif any(result["state"] != "completed" for result in results):
-            summary_section.append("完成后动作：未执行（存在失败或超时任务）")
         else:
             summary_section.append("完成后动作：未执行（配置为 none）")
 

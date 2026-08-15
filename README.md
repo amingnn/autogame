@@ -29,10 +29,10 @@ uv run --extra desktop python main.py
 无界面自动化模式：
 
 ```powershell
-uv run python main.py --automation
+uv run python main.py -a
 ```
 
-自动化模式只扫描本次启动时已经达到 `interval_hours` 的任务，并发启动后等待全部任务结束。只有所有到期任务成功时才执行完成动作。它不会导入 pywebview、读取页面、启动本地服务或占用端口。
+自动化模式只扫描本次启动时已经达到 `interval_hours` 的任务，并发启动后等待全部任务结束。有到期任务时，完成动作会按配置强制执行，不受任务失败或超时影响；没有到期任务或动作配置为 `none` 时不执行。它不会导入 pywebview、读取页面、启动本地服务或占用端口。
 
 ## 配置
 
@@ -66,9 +66,11 @@ system:
   automation_timeout_minutes: 30
   completion_action: "hibernate"
   completion_action_delay_seconds: 60
+  server_chan_enabled: true
 ```
 
 `completion_action: "none"` 表示完成后不执行系统动作。
+`server_chan_enabled: false` 表示不发送 Server 酱通知。
 
 ## 任务流程
 

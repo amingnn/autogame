@@ -65,6 +65,7 @@
             <div class="detail-field"><label>完成动作延迟（秒）</label><input id="systemDelay" type="number" min="0"></div>
             <div class="detail-field"><label>自动化超时（分钟）</label><input id="systemTimeout" type="number" min="1" step="1"></div>
             <div class="detail-field"><label>完成动作</label><select id="systemCompletionAction"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
+            <div class="detail-field"><label><input id="systemServerChanEnabled" type="checkbox"> 发送 Server 酱通知</label></div>
             <div class="detail-field"><label>Server 酱 SendKey（留空保持原值）</label><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="已配置时不会回显"></div>
             <div class="detail-field"><label><input id="clearSendKey" type="checkbox"> 清除已保存的 SendKey</label></div>
           </div>

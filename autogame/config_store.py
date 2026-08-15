@@ -99,6 +99,7 @@ class ConfigStore:
             "automation_timeout_minutes",
             "completion_action",
             "completion_action_delay_seconds",
+            "server_chan_enabled",
             "server_chan_key",
         }
         unknown = set(patch) - allowed

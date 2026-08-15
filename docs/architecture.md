@@ -11,8 +11,6 @@ D:\project\autogame
 ├── main.py                         # 唯一命令入口
 ├── config.yaml                     # 当前电脑正式配置
 ├── config.example.yaml             # 配置模板
-├── pyproject.toml                  # 依赖和可选桌面依赖
-├── uv.lock                         # 依赖锁定文件
 ├── autogame/
 │   ├── config.py                   # 用户配置模型和应用路径
 │   ├── config_store.py             # 配置安全保存
@@ -51,10 +49,7 @@ D:\project\autogame
 │   ├── state.json                  # 最近成功时间
 │   ├── locks/                      # 自动化和任务锁文件
 │   └── skyland_sign/token.txt      # 森空岛 Token
-├── logs/                           # 七日项目日志
-├── scripts/                        # Windows 计划任务维护脚本
-├── tests/                          # 分层自动化测试
-└── docs/                           # 计划和架构文档
+└── scripts/                        # Windows 计划任务维护脚本
 ```
 
 源码只存在于 `autogame/`。配置、状态、Token、锁和日志均不放入源码包。
@@ -65,7 +60,7 @@ D:\project\autogame
 flowchart TD
     A["main.py"] --> B{"启动参数"}
     B -->|"默认"| C["desktop/app.py"]
-    B -->|"--automation"| D["automation/runner.py"]
+    B -->|"-a / --automation"| D["automation/runner.py"]
     C --> E["DesktopBridge"]
     E --> F["TaskManager"]
     D --> F
@@ -116,7 +111,7 @@ uv run --extra desktop python main.py
 执行：
 
 ```powershell
-uv run python main.py --automation
+uv run python main.py -a
 ```
 
 流程：
@@ -125,7 +120,7 @@ uv run python main.py --automation
 获取自动化实例锁 -> 创建 TaskManager -> 计算本次到期任务
 -> 并发启动任务和监控循环 -> 等待全部进入终态
 -> 超时时停止本次脚本 -> 汇总通知
--> 全部成功时执行完成动作 -> 退出
+-> 有到期任务时按配置强制执行完成动作 -> 退出
 ```
 
 自动化只在进程启动时扫描一次到期任务。每天 07:00 和 19:00 的触发由 Windows 计划任务负责。
@@ -164,7 +159,7 @@ completed -> cooldown -> pending
 
 - `AppPaths`：集中计算配置、日志、数据、状态、锁和 Token 路径；
 - `AppPaths.default()`：返回当前项目根目录对应的路径；
-- `SystemConfig`：日志级别、分钟级自动化超时、通知和完成动作策略；
+- `SystemConfig`：日志级别、分钟级自动化超时、Server 酱通知开关和完成动作策略；
 - `TaskConfig`：任务启用状态、执行间隔和脚本路径；
 - `Config`：完整用户配置和内部路径集合；
 - `Config.load()`：从 YAML 读取并严格校验配置。
@@ -360,7 +355,7 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 ### `autogame/automation/runner.py`
 
 - `AutomationRunner`：负责一次无界面自动化会话；
-- `AutomationRunner.run()`：获取实例锁、并发启动到期任务、处理分钟级超时、汇总通知，并只在全部成功时执行完成动作；
+- `AutomationRunner.run()`：获取实例锁、并发启动到期任务、处理分钟级超时、汇总通知，并在有到期任务时按配置强制执行完成动作；
 - `run_automation()`：创建并运行自动化会话。
 
 自动化层只负责策略，任务启动和状态变化仍由 `TaskManager` 完成。

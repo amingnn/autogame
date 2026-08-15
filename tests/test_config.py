@@ -73,7 +73,20 @@ class ConfigTests(unittest.TestCase):
         )
 
         self.assertEqual(config.automation_timeout_minutes, 30)
+        self.assertTrue(config.server_chan_enabled)
         self.assertFalse(hasattr(config, "shutdown_on_complete"))
+
+    def test_server_chan_enabled_can_be_updated(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.yaml"
+            path.write_text(
+                "system:\n  server_chan_enabled: true\n",
+                encoding="utf-8",
+            )
+
+            ConfigStore(path).update_system({"server_chan_enabled": False})
+
+            self.assertFalse(Config.load(path).system.server_chan_enabled)
 
     def test_cleanup_keeps_recent_logs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -14,6 +14,7 @@ def _parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(description="AutoGame 自动化任务程序")
     parser.add_argument(
+        "-a",
         "--automation",
         action="store_true",
         help="以无界面自动化模式运行",

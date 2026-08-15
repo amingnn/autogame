@@ -125,7 +125,7 @@ class FullNotificationOutputTests(unittest.TestCase):
         self.assertIn("maaend：失败 (51 分 31 秒)", notification_payload["desp"])
         self.assertIn("总用时：51 分 31 秒", notification_payload["desp"])
         self.assertIn(
-            "完成后动作：未执行（存在失败或超时任务）",
+            "完成后动作：hibernate，延迟 60 秒",
             notification_payload["desp"],
         )
 
@@ -261,7 +261,7 @@ class FullNotificationOutputTests(unittest.TestCase):
                 results,
                 elapsed_seconds=3091,
                 timed_out=False,
-                completion_action_enabled=False,
+                completion_action_enabled=True,
             )
 
     @staticmethod

@@ -19,7 +19,7 @@ class MaaEndAdapter(ProcessScriptAdapter):
 
     description = "监听 MaaEnd 业务日志，检测结束进程任务或日志静默"
 
-    _entry_names = {
+    _entry_names = {  # noqa: RUF012
         "AutoSellMain": "💰售卖弹性物资",
         "SellProductSchedule": "🛒售卖产品",
         "AutoStockpileMain": "📦自动囤货",
@@ -33,7 +33,7 @@ class MaaEndAdapter(ProcessScriptAdapter):
         "EndProcess": "结束进程",
         "ExitProcess": "结束进程",
     }
-    _completion_entries = {"结束进程", "EndProcess", "ExitProcess", "CloseProcess"}
+    _completion_entries = {"结束进程", "EndProcess", "ExitProcess", "CloseProcess"}  # noqa: RUF012
 
     def __init__(self) -> None:
         super().__init__(

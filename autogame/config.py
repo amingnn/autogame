@@ -56,6 +56,7 @@ class SystemConfig(BaseModel):
     automation_timeout_minutes: int = Field(default=90, gt=0, le=10080)
     completion_action: Literal["shutdown", "sleep", "none", "hibernate"] = "sleep"
     completion_action_delay_seconds: int = Field(default=60, ge=0, le=86400)
+    server_chan_enabled: bool = True
     server_chan_key: str = ""
 
 
