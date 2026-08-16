@@ -15,7 +15,7 @@ from autogame.tasks.process_script import (
 
 
 class MaaEndAdapter(ProcessScriptAdapter):
-    """启动终末地和 MaaEnd，以结束进程任务或日志静默作为完成信号。"""
+    """启动 MaaEnd，以结束进程任务或日志静默作为完成信号。"""
 
     description = "监听 MaaEnd 业务日志，检测结束进程任务或日志静默"
 
@@ -39,11 +39,8 @@ class MaaEndAdapter(ProcessScriptAdapter):
         super().__init__(
             ProcessScriptSpec(
                 process_name="MaaEnd.exe",
-                game_path=r"D:\game\Hypergryph Launcher\games\Arknights Endfield\Endfield.exe",
-                game_process_name="Endfield.exe",
                 log_patterns=("maafw.log", "maafw*.log", "go-service.log"),
                 completion_mode="log_marker",
-                game_ready_delay_seconds=20,
                 inactivity_completion_seconds=10 * 60,
             )
         )

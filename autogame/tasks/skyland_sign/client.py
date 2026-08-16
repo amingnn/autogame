@@ -17,6 +17,7 @@ APP_CODE = "4ca99fa6b56cc2ba"
 BINDING_URL = "https://zonai.skland.com/api/v1/game/player/binding"
 GRANT_CODE_URL = "https://as.hypergryph.com/user/oauth2/v2/grant"
 CRED_CODE_URL = "https://zonai.skland.com/web/v1/user/auth/generate_cred_by_code"
+PASSWORD_TOKEN_URL = "https://as.hypergryph.com/user/auth/v1/token_by_phone_password"
 SIGN_URLS = {
     "arknights": "https://zonai.skland.com/api/v1/game/attendance",
     "endfield": "https://zonai.skland.com/web/v1/game/endfield/attendance",
@@ -28,6 +29,10 @@ USER_AGENT = (
 )
 
 
+class SkylandAuthenticationError(RuntimeError):
+    """表示森空岛通行证或签到凭据已经失效。"""
+
+
 class SkylandClient:
     """使用一个通行证 Token 完成森空岛签到。"""
 
@@ -35,6 +40,57 @@ class SkylandClient:
         self._session = requests.Session()
         self._timeout_seconds = timeout_seconds
         self._device_id = get_d_id()
+        self._initialize_credential(passport_token)
+
+    @classmethod
+    def from_password(
+        cls,
+        phone: str,
+        password: str,
+        timeout_seconds: float = 20.0,
+    ) -> "SkylandClient":
+        """使用手机号和密码登录并创建签到客户端。"""
+
+        session = requests.Session()
+        device_id = get_d_id()
+        response = session.post(
+            PASSWORD_TOKEN_URL,
+            json={"phone": phone, "password": password},
+            headers=cls._login_headers(device_id),
+            timeout=timeout_seconds,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("status") != 0:
+            raise RuntimeError(f"手机号密码登录失败：{payload.get('msg', payload)}")
+        try:
+            passport_token = str(payload["data"]["token"])
+        except (KeyError, TypeError) as exc:
+            raise RuntimeError(f"手机号密码登录返回数据无效：{payload}") from exc
+
+        client = cls.__new__(cls)
+        client._session = session
+        client._timeout_seconds = timeout_seconds
+        client._device_id = device_id
+        client._initialize_credential(passport_token)
+        return client
+
+    @staticmethod
+    def _login_headers(device_id: str) -> dict[str, str]:
+        """生成手机号登录和通行证换取接口共用的请求头。"""
+
+        return {
+            "User-Agent": USER_AGENT,
+            "Accept-Encoding": "gzip",
+            "Connection": "close",
+            "dId": device_id,
+            "X-Requested-With": "com.hypergryph.skland",
+        }
+
+    def _initialize_credential(self, passport_token: str) -> None:
+        """用通行证 Token 初始化森空岛签名凭据。"""
+
+        self._passport_token = passport_token
         credential = self._get_credential(passport_token)
         self._signature_token = str(credential["token"])
         self._headers = {
@@ -60,20 +116,14 @@ class SkylandClient:
     def _get_credential(self, passport_token: str) -> dict[str, object]:
         """把通行证 Token 换取森空岛凭据。"""
 
-        login_headers = {
-            "User-Agent": USER_AGENT,
-            "Accept-Encoding": "gzip",
-            "Connection": "close",
-            "dId": self._device_id,
-            "X-Requested-With": "com.hypergryph.skland",
-        }
+        login_headers = self._login_headers(self._device_id)
         grant_response = self._session.post(
             GRANT_CODE_URL,
             json={"appCode": APP_CODE, "token": passport_token, "type": 0},
             headers=login_headers,
             timeout=self._timeout_seconds,
         )
-        grant_response.raise_for_status()
+        self._raise_for_status(grant_response, "通行证 Token")
         grant = grant_response.json()
         if grant.get("status") != 0:
             raise RuntimeError(f"获得认证代码失败：{grant.get('msg', grant)}")
@@ -84,7 +134,7 @@ class SkylandClient:
             headers=login_headers,
             timeout=self._timeout_seconds,
         )
-        credential_response.raise_for_status()
+        self._raise_for_status(credential_response, "森空岛凭据")
         credential = credential_response.json()
         if credential.get("code") != 0:
             raise RuntimeError(f"获得森空岛凭据失败：{credential.get('message', credential)}")
@@ -98,7 +148,7 @@ class SkylandClient:
             headers=self._signed_headers(BINDING_URL, "get", None),
             timeout=self._timeout_seconds,
         )
-        response.raise_for_status()
+        self._raise_for_status(response, "角色列表")
         payload = response.json()
         if payload.get("code") != 0:
             raise RuntimeError(f"读取角色列表失败：{payload.get('message', payload)}")
@@ -119,15 +169,20 @@ class SkylandClient:
 
         body = {"gameId": binding.get("gameId"), "uid": binding.get("uid")}
         url = SIGN_URLS["arknights"]
+        body_text = json.dumps(body, separators=(",", ":"))
+        headers = self._signed_headers(url, "post", body)
+        headers["Content-Type"] = "application/json"
         response = self._session.post(
             url,
-            headers=self._signed_headers(url, "post", body),
-            json=body,
+            headers=headers,
+            data=body_text,
             timeout=self._timeout_seconds,
         )
-        response.raise_for_status()
-        payload = response.json()
         label = self._role_label(binding)
+        payload = response.json()
+        if response.status_code == 403 and payload.get("code") == 10001:
+            return [f"{label}今日已签到"]
+        self._raise_for_status(response, "明日方舟签到")
         if payload.get("code") != 0:
             return [f"{label}签到失败：{payload.get('message', payload)}"]
         awards = "".join(
@@ -156,11 +211,14 @@ class SkylandClient:
                 headers=headers,
                 timeout=self._timeout_seconds,
             )
-            response.raise_for_status()
             payload = response.json()
             role_binding = dict(binding)
             role_binding["nickName"] = role.get("nickname", "")
             label = self._role_label(role_binding)
+            if response.status_code == 403 and payload.get("code") == 10001:
+                messages.append(f"{label}今日已签到")
+                continue
+            self._raise_for_status(response, "终末地签到")
             if payload.get("code") != 0:
                 messages.append(f"{label}签到失败：{payload.get('message', payload)}")
                 continue
@@ -171,6 +229,20 @@ class SkylandClient:
             ]
             messages.append(f"{label}签到成功，获得了：{','.join(awards)}")
         return messages
+
+    @property
+    def passport_token(self) -> str:
+        """返回当前客户端使用的通行证 Token，供成功刷新后缓存。"""
+
+        return self._passport_token
+
+    @staticmethod
+    def _raise_for_status(response: requests.Response, action: str) -> None:
+        """把 401 转换成可触发密码刷新的明确异常。"""
+
+        if response.status_code == 401:
+            raise SkylandAuthenticationError(f"{action}认证已失效（HTTP 401）")
+        response.raise_for_status()
 
     def _signed_headers(
         self,

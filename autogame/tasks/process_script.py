@@ -1,4 +1,4 @@
-"""实现启动游戏、启动脚本、读取日志和监控进程的通用适配器。"""
+"""实现启动脚本、读取日志和监控进程的通用适配器。"""
 
 from __future__ import annotations
 
@@ -27,12 +27,9 @@ class ProcessScriptSpec:
     """描述一个外部脚本的固定进程和日志规则。"""
 
     process_name: str
-    game_path: str | None
-    game_process_name: str | None
     log_patterns: tuple[str, ...]
     completion_mode: CompletionMode
     startup_timeout_seconds: float = 15.0
-    game_ready_delay_seconds: float = 0.0
     inactivity_completion_seconds: float | None = None
     timeout_seconds: float = 4 * 60 * 60
 
@@ -51,7 +48,6 @@ class ProcessRun:
     """保存一次外部脚本运行所需的监控对象。"""
 
     script_process: ProcessHandle
-    game_process: ProcessHandle | None
     log_reader: IncrementalLogReader
     started_at_monotonic: float
     activity_seen: bool = False
@@ -83,7 +79,7 @@ class ProcessScriptAdapter:
         self.spec = spec
 
     async def start(self, context: TaskContext) -> StartResult:
-        """按顺序启动游戏和脚本，并建立日志读取基线。"""
+        """建立日志读取基线并启动脚本。"""
 
         script_path = context.script_path
         task_log = get_task_logger(context.task_name)
@@ -98,35 +94,6 @@ class ProcessScriptAdapter:
                 for pattern in self.spec.log_patterns
             )
             log_reader.prime()
-
-            game_process = None
-            if self.spec.game_path and self.spec.game_process_name:
-                game_process = await start_process_async(
-                    Path(self.spec.game_path),
-                    self.spec.game_process_name,
-                    self.spec.startup_timeout_seconds,
-                )
-                if game_process.owned:
-                    if self.spec.game_ready_delay_seconds > 0:
-                        task_log.info(
-                            "游戏进程 {}（PID {}）已启动，等待 {:.0f} 秒进入可用状态",
-                            self.spec.game_process_name,
-                            game_process.pid,
-                            self.spec.game_ready_delay_seconds,
-                        )
-                        await asyncio.sleep(self.spec.game_ready_delay_seconds)
-                    else:
-                        task_log.info(
-                            "游戏进程 {}（PID {}）已启动",
-                            self.spec.game_process_name,
-                            game_process.pid,
-                        )
-                else:
-                    task_log.info(
-                        "游戏进程 {}（PID {}）已在运行，继续使用",
-                        self.spec.game_process_name,
-                        game_process.pid,
-                    )
 
             script_process = await start_process_async(
                 script_path,
@@ -147,7 +114,6 @@ class ProcessScriptAdapter:
         )
         run = ProcessRun(
             script_process=script_process,
-            game_process=game_process,
             log_reader=log_reader,
             started_at_monotonic=time.monotonic(),
         )

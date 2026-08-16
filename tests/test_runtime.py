@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import psutil
 
@@ -192,9 +192,67 @@ class RuntimeTests(unittest.TestCase):
 
         self.assertTrue(observation.completion_seen)
 
-
 class ProcessAdapterTests(unittest.IsolatedAsyncioTestCase):
     """验证外部任务的日志静默完成兜底。"""
+
+    async def test_maa_start_only_restarts_existing_script(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            script_path = Path(directory) / "MAA.exe"
+            script_path.write_bytes(b"test")
+            context = TaskContext(
+                "maa",
+                TaskConfig(enabled=True, script_path=str(script_path)),
+                datetime.now(timezone.utc),
+            )
+            script_handle = ProcessHandle(101, "MAA.exe", 2.0, True)
+            start_process = AsyncMock(return_value=script_handle)
+
+            with patch(
+                "autogame.tasks.process_script.start_process_async",
+                new=start_process,
+            ):
+                result = await MaaAdapter().start(context)
+
+        self.assertEqual(result.result.state, "running")
+        self.assertTrue(result.result.waiting_for_completion)
+        self.assertIsInstance(result.handle, ProcessRun)
+        assert isinstance(result.handle, ProcessRun)
+        start_process.assert_awaited_once_with(
+            script_path,
+            "MAA.exe",
+            15.0,
+            allow_existing=False,
+            restart_existing=True,
+        )
+
+    async def test_maaend_start_only_starts_and_restarts_existing_script(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            script_path = Path(directory) / "MaaEnd.exe"
+            script_path.write_bytes(b"test")
+            context = TaskContext(
+                "maaend",
+                TaskConfig(enabled=True, script_path=str(script_path)),
+                datetime.now(timezone.utc),
+            )
+            script_handle = ProcessHandle(200, "MaaEnd.exe", 2.0, True)
+            start_process = AsyncMock(return_value=script_handle)
+
+            with patch(
+                "autogame.tasks.process_script.start_process_async",
+                new=start_process,
+            ):
+                result = await MaaEndAdapter().start(context)
+
+        self.assertEqual(result.result.state, "running")
+        self.assertTrue(result.result.waiting_for_completion)
+        self.assertIsInstance(result.handle, ProcessRun)
+        start_process.assert_awaited_once_with(
+            script_path,
+            "MaaEnd.exe",
+            15.0,
+            allow_existing=False,
+            restart_existing=True,
+        )
 
     async def test_maaend_completes_after_meaningful_log_inactivity(self) -> None:
         class EmptyReader:
@@ -204,7 +262,6 @@ class ProcessAdapterTests(unittest.IsolatedAsyncioTestCase):
         adapter = MaaEndAdapter()
         handle = ProcessRun(
             script_process=ProcessHandle(1, "MaaEnd.exe", 1.0, True),
-            game_process=None,
             log_reader=EmptyReader(),  # type: ignore[arg-type]
             started_at_monotonic=0,
             activity_seen=True,
@@ -234,7 +291,6 @@ class ProcessAdapterTests(unittest.IsolatedAsyncioTestCase):
         adapter = MaaAdapter()
         handle = ProcessRun(
             script_process=ProcessHandle(1, "MAA.exe", 1.0, True),
-            game_process=None,
             log_reader=MaaReader(),  # type: ignore[arg-type]
             started_at_monotonic=0,
         )

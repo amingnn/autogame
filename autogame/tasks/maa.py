@@ -14,7 +14,7 @@ from autogame.tasks.process_script import (
 
 
 class MaaAdapter(ProcessScriptAdapter):
-    """启动模拟器和 MAA，并以 gui.log 的整轮完成文本作为完成标志。"""
+    """启动 MAA，并以 gui.log 的整轮完成文本作为完成标志。"""
 
     description = "监听 MAA 的 gui.log，读取到任务已全部完成后结束"
 
@@ -26,11 +26,8 @@ class MaaAdapter(ProcessScriptAdapter):
         super().__init__(
             ProcessScriptSpec(
                 process_name="MAA.exe",
-                game_path=r"D:\OneDrive\win\桌面\#1 MuMu安卓设备-1.lnk",
-                game_process_name="MuMuNxDevice.exe",
                 log_patterns=("gui.log",),
                 completion_mode="log_marker",
-                game_ready_delay_seconds=20,
             )
         )
         self._previous_message: str | None = None

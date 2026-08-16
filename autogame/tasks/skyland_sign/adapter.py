@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+from autogame.config import SkylandAccountConfig
 from autogame.tasks.base import AdapterResult, StartResult, TaskContext
 from autogame.tasks.skyland_sign.service import run_sign_in
 from autogame.tasks.skyland_sign.token_store import TokenStore
@@ -16,13 +17,22 @@ class SkylandSignAdapter:
     description = "执行内置森空岛签到并根据返回结果完成"
     requires_script = False
 
-    def __init__(self, token_path: Path) -> None:
+    def __init__(
+        self,
+        token_path: Path,
+        account: SkylandAccountConfig | None = None,
+    ) -> None:
         self._token_store = TokenStore(token_path)
+        self._account = account
 
     async def start(self, context: TaskContext) -> StartResult:
         """在线程池执行签到并转换为统一结果。"""
 
-        result = await asyncio.to_thread(run_sign_in, self._token_store)
+        result = await asyncio.to_thread(
+            run_sign_in,
+            self._token_store,
+            self._account,
+        )
         report_lines = tuple(result.messages)
         if result.success:
             return StartResult(

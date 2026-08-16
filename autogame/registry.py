@@ -29,7 +29,10 @@ TASK_DEFINITIONS: dict[str, TaskDefinition] = {
     "skyland_sign": TaskDefinition(
         name="skyland_sign",
         task_factory=lambda config: SkylandSignAdapter(
-            config.paths.skyland_token_file
+            config.paths.skyland_token_file,
+            config.tasks.get("skyland_sign").account
+            if config.tasks.get("skyland_sign")
+            else None,
         ),
         description=SkylandSignAdapter.description,
         requires_script=False,
