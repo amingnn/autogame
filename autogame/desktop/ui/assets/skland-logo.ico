@@ -1,0 +1,29 @@
+<!doctype html><html lang="zh-cmn-Hans"><head><meta charset="UTF-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1"/><link rel="apple-touch-icon" href="https://bbs.hycdn.cn/public/skland-web/image/11a014c95c5ee68fe26c17995aa44a64.png"/><link rel="shortcut icon" href="https://bbs.hycdn.cn/public/skland-web/image/11a014c95c5ee68fe26c17995aa44a64.png" type="image/x-icon"/><script>window.__CHIMERA_CONFIG__ = {
+      isInit: true,
+      readyList: [],
+      name: "skland-bbs",
+      version: "0.1.9",
+      environment: "production",
+      sentryDSN: "https://1c3ecfae1f15b89229b341350adcc7e6@sentry.hypergryph.com/15",
+      seoApi: "",
+      pagePath: 'index',
+      pathToRegexpMap: {},
+      utils: {
+        nativeOpen: window.open,
+      }
+    };</script><link rel="stylesheet" href="https://bbs.hycdn.cn/public/common-config/others/fonts/Akrobat/ba4f7a2d1611e2344f0102ead8883f19.css"/><link rel="stylesheet" href="https://bbs.hycdn.cn/skland-fe-static/common/clear.css"/><style>html,
+    body,
+    #root {
+      position: relative;
+      width: 100%;
+      min-height: 100vh;
+
+      @supports (min-height: 100dvh) {
+        min-height: 100dvh;
+      }
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }</style><script async src="https://bbs.hycdn.cn/public/common-config/others/sentry/79aa039f4496a8d90aba4b2b277993c1.js" integrity="sha384-rC0v2Rgzx9jBuF8mK1KXiglUzLaL4QblnF7dc/mNBJX3UvmmG4AUWxcciy7683+i" crossorigin="anonymous"></script><script async src="https://bbs.hycdn.cn/public/common-config/others/sentry/791be63642bf3fe23b093e852f8bc89b.js" crossorigin="anonymous"></script><script async src="https://bbs.hycdn.cn/skland-fe-static/common/monitor/performance-DSDzXHxt.js" crossorigin="anonymous"></script><title>森空岛 - 鹰角网络官方社区</title><meta name="msvalidate.01" content="260AA96AB453157E47325C432DB86173"><meta name="google-site-verification" content="gjDAoX8sLY_scEhrqTvdmg703OlRQP91DH6H0LItaWk"><meta name="baidu-site-verification" content="codeva-YwND86vJRr"><meta name="description" content="森空岛是鹰角网络官方社区，集合了鹰角网络旗下游戏、音乐、动画、周边、活动等官方资讯，同时也是玩家交流、互动、创作分享的平台。"><meta name="keywords" content="森空岛,鹰角网络玩家社区,SKLAND,skland,明日方舟玩家社区"><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/vendors_core-059be3de.8649641f.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/vendors_core-992c5077.3377b4ce.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/vendors_core-1a699faa.a9ad949f.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/4586.ddfce212.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/8407.da4d9449.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/8868.00dde46f.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/7905.5c8a3e98.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/3158.90eafdb6.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/4594.c1246ffd.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/1753.3c87e5c8.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/997.c6236e99.js"></script><script defer="defer" src="https://bbs.hycdn.cn/skland-fe-static/skland-bbs/main.0e1729e7.js"></script></head><body><div id="before"></div><div id="root"></div><div id="after"></div><script>console.log('html load: ', Date.now() - performance.timing.connectStart)
+    console.time('entryIndex')</script></body></html>

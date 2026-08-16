@@ -332,16 +332,37 @@ class TaskManager:
                     error="自动化会话超过全局超时时间",
                 )
 
+    async def stop_task(self, task_name: str, reason: str = "任务由用户停止") -> bool:
+        """停止指定任务及其进程树，并释放执行锁。"""
+
+        active = self._active.get(task_name)
+        if active is None:
+            return False
+        stop_error: str | None = None
+        try:
+            await active.adapter.stop(active.context, active.handle)
+        except Exception as exc:
+            stop_error = f"{reason}，关闭脚本异常：{exc}"
+        await self._finish_task(
+            task_name,
+            success=False,
+            error=stop_error or reason,
+        )
+        return True
+
+    async def stop_active_tasks(self, reason: str = "任务由用户停止") -> int:
+        """停止当前进程启动的活动任务及其进程树，并释放执行锁。"""
+
+        stopped = 0
+        for task_name in list(self._active):
+            if await self.stop_task(task_name, reason):
+                stopped += 1
+        return stopped
+
     async def shutdown(self) -> None:
         """停止由当前进程启动的活动任务并释放执行锁。"""
 
-        for task_name, active in list(self._active.items()):
-            await active.adapter.stop(active.context, active.handle)
-            await self._finish_task(
-                task_name,
-                success=False,
-                error="AutoGame 已停止",
-            )
+        await self.stop_active_tasks("AutoGame 已停止")
 
     async def _finish_task(
         self,

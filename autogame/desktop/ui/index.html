@@ -3,79 +3,117 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AutoGame 任务管理</title>
+    <title>AutoGame</title>
     <link rel="stylesheet" href="app.css" />
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand"><span class="brand-mark">A</span><span>AutoGame</span></div>
-        <nav>
-          <button class="nav-item active" data-section="tasks"><span>▤</span>任务</button>
-          <button class="nav-item" data-section="logs"><span>▤</span>日志</button>
-          <button class="nav-item" data-section="settings"><span>⚙</span>设置</button>
-        </nav>
-        <div class="connection-status"><span class="status-dot"></span><span id="connectionText">正在连接</span></div>
+      <header class="window-chrome">
+        <div class="window-brand pywebview-drag-region">
+          <span class="window-brand-mark">A</span>
+          <div class="window-brand-copy">
+            <strong>AutoGame</strong>
+          </div>
+        </div>
+        <div class="window-toolbar">
+          <div class="header-summary">
+            <span class="connection-status"><i class="status-dot"></i><span id="connectionText">正在连接</span></span>
+            <span class="header-metric"><strong id="taskCount">0</strong> 个任务</span>
+            <span class="header-metric"><strong id="runningCount">0</strong> 运行中</span>
+            <span class="header-time" id="updatedAt">等待数据</span>
+          </div>
+        </div>
+        <div class="window-drag-space pywebview-drag-region"></div>
+        <div class="window-header-actions">
+          <button class="icon-button toolbar-icon-button" id="reloadButton" title="重新加载配置" aria-label="重新加载配置">↻</button>
+          <button class="icon-button toolbar-icon-button" id="settingsButton" title="设置" aria-label="设置">⚙</button>
+        </div>
+        <div class="window-actions">
+          <button class="window-control" id="minimizeButton" title="最小化" aria-label="最小化"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg></button>
+          <button class="window-control" id="maximizeButton" title="最大化" aria-label="最大化"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="1" /></svg></button>
+          <button class="window-control" id="closeButton" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+        </div>
+      </header>
+
+      <aside class="task-sidebar panel">
+        <div class="task-list" id="taskTable"></div>
+        <div class="task-sidebar-footer">
+          <button class="primary-button" id="topRunButton" title="强制开始全部启用任务（忽略冷却）" aria-label="强制开始全部启用任务（忽略冷却）">▶ 全部开始</button>
+        </div>
       </aside>
 
-      <main class="main-content">
-        <header class="top-bar">
-          <div>
-            <p class="eyebrow">自动化控制台</p>
-            <h1 id="pageTitle">任务</h1>
-          </div>
-          <div class="top-actions">
-            <button class="secondary-button" id="reloadButton">重新加载配置</button>
-            <button class="primary-button" id="topRunButton">▶ 运行任务</button>
-          </div>
-        </header>
+      <div class="main-column">
+        <main class="workspace">
 
-        <section class="summary-cards">
-          <article class="summary-card"><span class="summary-icon blue">▣</span><div><strong id="taskCount">0</strong><span>任务总数</span></div></article>
-          <article class="summary-card"><span class="summary-icon green">▶</span><div><strong id="runningCount">0</strong><span>正在运行</span></div></article>
-          <article class="summary-card"><span class="summary-icon purple">◔</span><div><strong id="overallProgress">0%</strong><span>本次进度</span></div></article>
-        </section>
-
-        <section class="content-area" id="tasksSection">
-          <div class="task-list-panel">
-            <div class="panel-header"><h2>任务列表</h2><span id="updatedAt">等待数据</span></div>
-            <div class="table-scroll">
-              <table>
-                <thead><tr><th>任务名称</th><th>状态</th><th>进度</th><th>最近成功</th><th>操作</th></tr></thead>
-                <tbody id="taskTable"></tbody>
-              </table>
+        <section class="detail-panel panel" id="tasksSection">
+          <div class="panel-header">
+            <div>
+              <span class="eyebrow">当前任务</span>
+              <h2 id="detailTitle">选择任务</h2>
             </div>
           </div>
-
-          <aside class="detail-panel">
-            <div class="panel-header"><h2 id="detailTitle">选择任务</h2><button class="icon-button" id="closeDetails">×</button></div>
-            <div id="detailContent" class="detail-content empty-state">请从左侧选择一个任务</div>
-          </aside>
+          <div id="detailContent" class="detail-content detail-empty">请从左侧选择一个任务</div>
         </section>
 
-        <section class="logs-section hidden" id="logsSection">
-          <div class="log-header"><h2>最近日志</h2><button class="secondary-button" id="refreshLogsButton">刷新</button></div>
-          <pre id="logsContent">暂无日志</pre>
-        </section>
+        <aside class="logs-panel panel" id="logsSection">
+          <div class="panel-header">
+            <div>
+              <span class="eyebrow">实时输出</span>
+              <h2>运行日志</h2>
+            </div>
+            <div class="log-actions">
+              <button class="icon-button" id="clearLogsButton" title="清除显示" aria-label="清除显示"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2m-8 0 1 13h6l1-13M10 10v7m4-7v7" /></svg></button>
+              <button class="icon-button" id="openLogsFolderButton" title="打开日志文件夹" aria-label="打开日志文件夹"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5h6l1.8 2h9.2v8.7a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8z" /><path d="M3.5 7.5V6.8A1.8 1.8 0 0 1 5.3 5h4l1.8 2.5" /></svg></button>
+            </div>
+          </div>
+          <div id="logsContent" class="log-list"></div>
+          <div class="log-footer">
+            <span><i class="status-dot"></i> 当前会话</span>
+            <strong id="overallProgress">0%</strong>
+          </div>
+        </aside>
+        </main>
+      </div>
 
-        <section class="settings-section hidden" id="settingsSection">
-          <div class="log-header"><h2>全局配置</h2><button class="primary-button" id="saveSystemConfigButton">保存全局配置</button></div>
+      <div class="resize-handles" aria-hidden="true">
+        <div class="resize-handle resize-n" data-resize-edge="n"></div>
+        <div class="resize-handle resize-e" data-resize-edge="e"></div>
+        <div class="resize-handle resize-s" data-resize-edge="s"></div>
+        <div class="resize-handle resize-w" data-resize-edge="w"></div>
+        <div class="resize-handle resize-ne" data-resize-edge="ne"></div>
+        <div class="resize-handle resize-se" data-resize-edge="se"></div>
+        <div class="resize-handle resize-sw" data-resize-edge="sw"></div>
+        <div class="resize-handle resize-nw" data-resize-edge="nw"></div>
+      </div>
+
+      <section class="settings-section hidden" id="settingsSection" aria-hidden="true">
+        <div class="settings-backdrop"></div>
+        <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+          <div class="panel-header">
+            <div>
+              <span class="eyebrow">应用偏好</span>
+              <h2 id="settingsTitle">全局设置</h2>
+            </div>
+            <button class="icon-button" id="closeSettingsButton" title="关闭设置" aria-label="关闭设置">×</button>
+          </div>
           <div class="settings-form">
             <div class="detail-field"><label>日志级别</label><select id="systemLogLevel"><option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
             <div class="detail-field"><label>完成动作延迟（秒）</label><input id="systemDelay" type="number" min="0"></div>
             <div class="detail-field"><label>自动化超时（分钟）</label><input id="systemTimeout" type="number" min="1" step="1"></div>
             <div class="detail-field"><label>完成动作</label><select id="systemCompletionAction"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
-            <div class="detail-field"><label><input id="systemServerChanEnabled" type="checkbox"> 发送 Server 酱通知</label></div>
-            <div class="detail-field"><label>Server 酱 SendKey（留空保持原值）</label><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="已配置时不会回显"></div>
-            <div class="detail-field"><label><input id="clearSendKey" type="checkbox"> 清除已保存的 SendKey</label></div>
+            <label class="check-field"><input id="systemServerChanEnabled" type="checkbox"> <span>发送 Server 酱通知</span></label>
+            <div class="detail-field full-field"><label>Server 酱 SendKey（留空保持原值）</label><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="已配置时不会回显"></div>
+            <label class="check-field full-field"><input id="clearSendKey" type="checkbox"> <span>清除已保存的 SendKey</span></label>
           </div>
           <div class="info-card">
-            <p>普通用户模式：直接运行 <code>python main.py</code>，只打开桌面，不会自动启动任务。</p>
-            <p>自动化模式：运行 <code>python main.py --automation</code>，按间隔自动扫描到期任务。</p>
-            <p>任务和全局配置保存后会直接写入 <code>config.yaml</code>，程序会校验、备份并重新加载。</p>
+            <p>任务和全局配置保存后会写入根目录 <code>config.yaml</code>，程序会校验、备份并重新加载。</p>
           </div>
-        </section>
-      </main>
+          <div class="settings-actions">
+            <button class="secondary-button" id="cancelSettingsButton">取消</button>
+            <button class="primary-button" id="saveSystemConfigButton">保存设置</button>
+          </div>
+        </div>
+      </section>
     </div>
     <div id="toast" class="toast"></div>
     <script src="app.js"></script>

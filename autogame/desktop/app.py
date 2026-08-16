@@ -104,15 +104,18 @@ def run_desktop_app(config: Config) -> None:
     page = Path(__file__).resolve().parent / "ui" / "index.html"
     backend.start()
     try:
-        webview.create_window(
-            "AutoGame 任务管理",
+        window = webview.create_window(
+            "AutoGame",
             page.as_uri(),
             js_api=bridge,
             width=1280,
             height=820,
             min_size=(960, 640),
             resizable=True,
+            frameless=True,
+            easy_drag=False,
         )
+        bridge._bind_window(window)
         webview.start(debug=False)
     finally:
         mlog.info("桌面窗口已关闭，正在停止任务管理器")
