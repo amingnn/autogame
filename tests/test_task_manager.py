@@ -149,6 +149,27 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(await runner.run())
             self.assertEqual(started, {"first", "second"})
 
+    async def test_forced_automation_starts_cooldown_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = self.make_config(Path(directory))
+            runner = AutomationRunner(config, force=True)
+            definition = TaskDefinition(
+                "demo",
+                lambda _config: ImmediateTask(),
+                "立即完成",
+                False,
+            )
+
+            with (
+                patch.object(runner.manager, "should_run", return_value=False),
+                patch(
+                    "autogame.task_manager.get_task_definition",
+                    return_value=definition,
+                ),
+            ):
+                self.assertTrue(await runner.run())
+            self.assertEqual(runner.manager.get_task_state("demo"), "completed")
+
     async def test_failed_task_still_executes_completion_action(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = Config(
@@ -234,6 +255,66 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(await runner.run())
 
             push_wechat.assert_not_called()
+
+    async def test_server_chan_skips_when_only_some_enabled_tasks_run(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(
+                paths=AppPaths(root=Path(directory)),
+                system=SystemConfig(
+                    completion_action="none",
+                    server_chan_enabled=True,
+                    server_chan_key="secret-value",
+                ),
+                tasks={
+                    "demo": TaskConfig(enabled=True),
+                    "cooldown": TaskConfig(enabled=True),
+                },
+            )
+            runner = AutomationRunner(config)
+            definition = TaskDefinition(
+                "demo",
+                lambda _config: ImmediateTask(),
+                "立即完成",
+                False,
+            )
+
+            with (
+                patch.object(runner.manager, "should_run", side_effect=lambda name: name == "demo"),
+                patch("autogame.task_manager.get_task_definition", return_value=definition),
+                patch("autogame.automation.runner.push_wechat") as push_wechat,
+                patch("autogame.automation.runner.report_sections"),
+            ):
+                self.assertTrue(await runner.run())
+
+            push_wechat.assert_not_called()
+
+    async def test_server_chan_sends_when_all_enabled_tasks_run(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(
+                paths=AppPaths(root=Path(directory)),
+                system=SystemConfig(
+                    completion_action="none",
+                    server_chan_enabled=True,
+                    server_chan_key="secret-value",
+                ),
+                tasks={"demo": TaskConfig(enabled=True)},
+            )
+            runner = AutomationRunner(config)
+            definition = TaskDefinition(
+                "demo",
+                lambda _config: ImmediateTask(),
+                "立即完成",
+                False,
+            )
+
+            with (
+                patch("autogame.task_manager.get_task_definition", return_value=definition),
+                patch("autogame.automation.runner.push_wechat") as push_wechat,
+                patch("autogame.automation.runner.report_sections"),
+            ):
+                self.assertTrue(await runner.run())
+
+            push_wechat.assert_called_once_with("secret-value")
 
     async def test_successful_tasks_execute_action_and_report_details(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -16,8 +16,9 @@ from autogame.task_manager import TaskManager
 class AutomationRunner:
     """负责一次计划任务触发后的自动化策略。"""
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, force: bool = False) -> None:
         self.config = config
+        self.force = force
         self.manager = TaskManager(config)
         self._instance_lock = ExecutionLock(config.paths.lock_dir)
         self._power = PowerController()
@@ -34,20 +35,26 @@ class AutomationRunner:
         started_at = datetime.now(tz=timezone.utc)
         stop_event = asyncio.Event()
         monitor_task = asyncio.create_task(self.manager.monitor_loop(stop_event))
-        targets = [
-            name for name in self.config.tasks if self.manager.should_run(name)
+        enabled_targets = [
+            name for name, task in self.config.tasks.items() if task.enabled
         ]
+        targets = (
+            enabled_targets
+            if self.force
+            else [name for name in enabled_targets if self.manager.should_run(name)]
+        )
         cooldown = [
-            name
-            for name, task in self.config.tasks.items()
-            if task.enabled and name not in targets
+            name for name in enabled_targets if name not in targets
         ]
         mlog.info("冷却中任务：{}", self._format_task_names(cooldown))
         mlog.info("待执行任务：{}", self._format_task_names(targets))
         timed_out = False
         try:
             await asyncio.gather(
-                *(self.manager.run_task(task_name) for task_name in targets)
+                *(
+                    self.manager.run_task(task_name, force=self.force)
+                    for task_name in targets
+                )
             )
 
             timeout_seconds = self.config.system.automation_timeout_minutes * 60
@@ -83,11 +90,20 @@ class AutomationRunner:
         )
         report_sections(notification_sections)
 
-        if (
-            self.config.system.server_chan_enabled
+        should_send_server_chan = (
+            bool(targets)
+            and set(targets) == set(enabled_targets)
+            and self.config.system.server_chan_enabled
+            and bool(self.config.system.server_chan_key)
+        )
+        if should_send_server_chan:
+            push_wechat(self.config.system.server_chan_key)
+        elif (
+            targets
+            and self.config.system.server_chan_enabled
             and self.config.system.server_chan_key
         ):
-            push_wechat(self.config.system.server_chan_key)
+            mlog.info("本次不是全部运行，跳过 Server 酱通知")
         if targets and self.config.system.completion_action != "none":
             if not all_succeeded:
                 mlog.warning("存在失败或超时任务，仍执行强制系统完成动作")
@@ -188,7 +204,7 @@ class AutomationRunner:
         return f"{minutes} 分 {remaining_seconds} 秒"
 
 
-async def run_automation(config: Config) -> bool:
+async def run_automation(config: Config, force: bool = False) -> bool:
     """创建并运行一次自动化会话。"""
 
-    return await AutomationRunner(config).run()
+    return await AutomationRunner(config, force=force).run()

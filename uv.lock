@@ -21,13 +21,9 @@ dependencies = [
     { name = "loguru" },
     { name = "psutil" },
     { name = "pydantic" },
+    { name = "pywebview" },
     { name = "requests" },
     { name = "ruamel-yaml" },
-]
-
-[package.optional-dependencies]
-desktop = [
-    { name = "pywebview" },
 ]
 
 [package.dev-dependencies]
@@ -42,11 +38,10 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pydantic", specifier = ">=2.10.0" },
-    { name = "pywebview", marker = "extra == 'desktop'", specifier = ">=5.4" },
+    { name = "pywebview", specifier = ">=5.4" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "ruamel-yaml", specifier = ">=0.18.10" },
 ]
-provides-extras = ["desktop"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "rich", specifier = ">=14.2.0" }]
