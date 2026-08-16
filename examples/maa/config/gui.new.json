@@ -1,0 +1,793 @@
+{
+  "Configurations": {
+    "Default": {
+      "TaskQueue": [
+        {
+          "$type": "StartUpTask",
+          "AccountName": "",
+          "AccountSwitchEnabled": false,
+          "Name": "",
+          "IsEnable": true,
+          "TaskType": "StartUp"
+        },
+        {
+          "$type": "RecruitTask",
+          "MaxTimes": 4,
+          "ExtraTagMode": 0,
+          "Level3PreferTags": [],
+          "PreferTagEnabled": true,
+          "PreserveTagList": [
+            "支援机械"
+          ],
+          "PreserveTagEnabled": false,
+          "RefreshLevel3": true,
+          "ForceRefresh": true,
+          "Level3Choose": true,
+          "Level4Choose": true,
+          "Level5Choose": false,
+          "Level6Choose": false,
+          "Level3Time": 540,
+          "Level4Time": 540,
+          "Name": "",
+          "IsEnable": true,
+          "TaskType": "Recruit"
+        },
+        {
+          "$type": "InfrastTask",
+          "Mode": "Custom",
+          "UsesOfDrones": "Money",
+          "DormThreshold": 30,
+          "DormTrustEnabled": true,
+          "OriginiumShardAutoReplenishment": true,
+          "DormFilterNotStationed": true,
+          "ReceptionMessageBoard": true,
+          "ReceptionClueExchange": true,
+          "SendClue": true,
+          "ContinueTraining": true,
+          "CustomFileType": "243_layout_3_times_a_day.json",
+          "Filename": "D:\\game\\MAA-v6.13.0-win-x64\\resource\\custom_infrast\\243_layout_3_times_a_day.json",
+          "PlanSelect": 0,
+          "RoomList": [
+            {
+              "Room": "Mfg"
+            },
+            {
+              "Room": "Trade"
+            },
+            {
+              "Room": "Control"
+            },
+            {
+              "Room": "Power"
+            },
+            {
+              "Room": "Reception"
+            },
+            {
+              "Room": "Office"
+            },
+            {
+              "Room": "Dorm"
+            },
+            {
+              "Room": "Processing"
+            },
+            {
+              "Room": "Training"
+            }
+          ],
+          "Name": "",
+          "IsEnable": true,
+          "TaskType": "Infrast"
+        },
+        {
+          "$type": "MallTask",
+          "Shopping": true,
+          "CreditFight": true,
+          "CreditFightFormation": 1,
+          "CreditFightLastTime": "2026/08/15 00:00:00",
+          "CreditFightOnceADay": true,
+          "VisitFriends": true,
+          "VisitFriendsOnceADay": true,
+          "VisitFriendsLastTime": "2026/08/15 00:00:00",
+          "FirstList": "招聘许可",
+          "BlackList": "碳;家具;加急许可",
+          "ShoppingIgnoreBlackListWhenFull": false,
+          "OnlyBuyDiscount": false,
+          "ReserveMaxCredit": false,
+          "IsCreditFightAvailable": false,
+          "IsVisitFriendsAvailable": false,
+          "Name": "",
+          "IsEnable": true,
+          "TaskType": "Mall"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": false,
+          "MedicineCount": 0,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": true,
+          "TimesLimit": 1,
+          "Series": 0,
+          "StagePlan": [
+            "Annihilation"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": false,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": false,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "剿灭",
+          "IsEnable": true,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": true,
+          "MedicineCount": 99,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": false,
+          "TimesLimit": 2147483647,
+          "Series": 0,
+          "StagePlan": [
+            "TO-5"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": true,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": true,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "活动关",
+          "IsEnable": true,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": false,
+          "MedicineCount": 0,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": false,
+          "TimesLimit": 2147483647,
+          "Series": 0,
+          "StagePlan": [
+            "AP-5"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": false,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": false,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "红票",
+          "IsEnable": false,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": false,
+          "MedicineCount": 0,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": false,
+          "TimesLimit": 2147483647,
+          "Series": 0,
+          "StagePlan": [
+            "CE-6"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": false,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": false,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "龙门币",
+          "IsEnable": false,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": false,
+          "MedicineCount": 0,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": false,
+          "TimesLimit": 2147483647,
+          "Series": 0,
+          "StagePlan": [
+            "PR-D-2"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": false,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": false,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "星期三关卡",
+          "IsEnable": false,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": false,
+          "MedicineCount": 0,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": false,
+          "TimesLimit": 2147483647,
+          "Series": 0,
+          "StagePlan": [
+            "PR-A-2"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": false,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": false,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "星期五关卡",
+          "IsEnable": false,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "FightTask",
+          "UseMedicine": false,
+          "MedicineCount": 0,
+          "UseStone": false,
+          "StoneCount": 0,
+          "EnableTargetDrop": false,
+          "DropId": "",
+          "DropCount": 0,
+          "IsInventoryTarget": false,
+          "EnableTimesLimit": false,
+          "TimesLimit": 2147483647,
+          "Series": 0,
+          "StagePlan": [
+            "1-7"
+          ],
+          "IsDrGrandet": false,
+          "UseExpiringMedicine": false,
+          "MedicineExpireDays": 2,
+          "UseExpireMedicineForActivity": false,
+          "UseCustomAnnihilation": false,
+          "AnnihilationStage": "Annihilation",
+          "HideUnavailableStage": false,
+          "IsStageManually": false,
+          "UseOptionalStage": false,
+          "UseStoneAllowSave": false,
+          "HideSeries": false,
+          "StageResetMode": "Ignore",
+          "UseWeeklySchedule": false,
+          "Name": "1-7",
+          "IsEnable": false,
+          "TaskType": "Fight"
+        },
+        {
+          "$type": "AwardTask",
+          "Award": true,
+          "Mail": true,
+          "FreeGacha": false,
+          "Orundum": true,
+          "Mining": true,
+          "SpecialAccess": true,
+          "Name": "",
+          "IsEnable": true,
+          "TaskType": "Award"
+        },
+        {
+          "$type": "UserDataUpdateTask",
+          "UpdateOperBox": true,
+          "UpdateDepot": true,
+          "TriggerInterval": "Weekly",
+          "IsTriggered": true,
+          "Name": "",
+          "IsEnable": true,
+          "TaskType": "UserDataUpdate"
+        }
+      ],
+      "Gui": {
+        "ConnectSettings": {
+          "AutoDetect": false,
+          "AlwaysAutoDetect": false,
+          "Config": "MuMuEmulator12",
+          "AdbPath": "D:\\Program Files\\Netease\\MuMu\\nx_main\\adb.exe",
+          "AdbReplaced": false,
+          "Address": "127.0.0.1:5557",
+          "AddressHistory": [
+            "127.0.0.1:5557",
+            "127.0.0.1:",
+            "127.0.0.1:16384"
+          ],
+          "Extras": {
+            "LDPlayer": {
+              "EmulatorPath": "",
+              "ManualSetIndex": false,
+              "InstanceIndex": 0,
+              "IsEnabled": false
+            },
+            "MuMuEmulator12": {
+              "EmulatorPath": "D:\\Program Files\\Netease\\MuMu",
+              "EnableBridgeConnection": false,
+              "EnableTouch": false,
+              "InstanceIndex": 0,
+              "IsEnabled": true
+            },
+            "Win32Extra": {
+              "ScreencapMethod": "FramePool",
+              "MouseMethod": "SendMessageWithCursorPos",
+              "KeyboardMethod": "SendMessage"
+            },
+            "BluestacksExtra": {
+              "ConfigKeyword": "",
+              "ConfigPath": ""
+            }
+          },
+          "AllowAdbRestart": true,
+          "AllowAdbHardRestart": true,
+          "TouchMode": "MiniTouch",
+          "EnableAdbLite": false,
+          "KillAdbOnExit": false
+        },
+        "Performance": {
+          "UseGpu": true,
+          "GpuDescription": "NVIDIA GeForce GTX 1660 SUPER",
+          "GpuInstancePath": "PCI\\VEN_10DE\u0026DEV_21C4\u0026SUBSYS_C7581462\u0026REV_A1\\4\u00261fc990d7\u00260\u00260019",
+          "AllowDeprecatedGpu": false
+        },
+        "ExternalNotification": {
+          "Configs": [
+            {
+              "$type": "CustomWebhook",
+              "Url": "AQAAANCMnd8BFdERjHoAwE/Cl\u002BsBAAAAN75v2p2mfECBhvS8pqyHVwAAAAACAAAAAAAQZgAAAAEAACAAAADoucxpA\u002BQRk505yYpfC5NWUqQ6HJWZfNBfv/J9bAXBHAAAAAAOgAAAAAIAACAAAAAM\u002BD6Vnw8V1ilLRPh6XhVTm/bJ2xfAIQ\u002BrCTv2CukdUiAAAABWjlN1KvhmLJu3uzKvSSbvDKH0dc\u002BT6DCbHJPJICfomkAAAADEddhWQaaLfLfUY4YmtA7NmNJh\u002Bjs5KQZAKYVMf2yBysWTz3G7pD85\u002BVxLMgG/P26YmYofZsFF2a9Oe5oNbEix",
+              "Headers": "",
+              "Body": "AQAAANCMnd8BFdERjHoAwE/Cl\u002BsBAAAAN75v2p2mfECBhvS8pqyHVwAAAAACAAAAAAAQZgAAAAEAACAAAADkQzPdon9x6Vi9PLIk8vX/UX1vm1w8TAA9j6fwfZ7iPAAAAAAOgAAAAAIAACAAAACgJH3pLzZ5QBTFiB1hMbIufbfSjwZ3tpAp65Mi/5c3ujAAAADMHer6HSbMwobdFHdDyvo\u002Blp2eQAS6D54OFtlhOsyZDQ5WMrL7BhKD9vwAFdIR/m9AAAAAp1YA\u002BeFSNu0MKgiHIK2esaLaLNe00aqXsfejT7TKdZWXvul18WCBFxdIrsfgNn13a6T2dlfpTw6m3rdJZhKQCg=="
+            }
+          ],
+          "SendWhenComplete": false,
+          "ShowWhenCompleteWithDetails": true,
+          "SendWhenError": false,
+          "SendWhenStalled": false
+        },
+        "RemoteControl": {
+          "RemoteControlGetTaskEndpointUri": "",
+          "RemoteControlReportStatusUri": "",
+          "RemoteControlUserIdentity": "",
+          "RemoteControlDeviceIdentity": "AQAAANCMnd8BFdERjHoAwE/Cl\u002BsBAAAAerksmCGJpUaJM/HUN9dVHAAAAAACAAAAAAAQZgAAAAEAACAAAAByMzlDu32gxuJzbg8SadpYVZByOF6Bds7WB4Dk22o5YQAAAAAOgAAAAAIAACAAAAAIigX7Ver9cXieZjjnmvH5sgJ0sXXtovWS7dij57mJ6zAAAAByq4NEHaLYkJbpmBi\u002BTq8CzdFYF3M/fv0MRf3U2yszqzuX5SNFFFrLC6jv078rmS1AAAAA2vxTWhHfCbhykHA5f40C/\u002BKokHtarQtpIjtRxwpybcRCI5T40jDCnidcgcT9/LztzGD/ddC4gjZXv0\u002B5lyYrNA==",
+          "RemoteControlPollIntervalMs": 1000
+        },
+        "RuntimeSettings": {
+          "ClientType": "Official",
+          "StartGame": true,
+          "DeployWithPause": false,
+          "AutoRestartOnDrop": true,
+          "RoguelikeDelayAbortUntilCombatComplete": false,
+          "PreRunScript": "",
+          "PostRunScript": "",
+          "ExecuteScriptOnCopilot": false,
+          "ExecuteScriptOnManualStop": false,
+          "BlockSleep": false,
+          "BlockSleepWithScreenOn": true,
+          "ReportToPenguin": false,
+          "PenguinId": "",
+          "ReportToYituliu": false,
+          "EnableStallTimeout": true,
+          "StallTimeoutReminderIntervalMinutes": 30,
+          "StallTimeoutMinutes": 25
+        },
+        "StartUpSettings": {
+          "RunDirectly": true,
+          "SkipStartupAutoRunAfterUpdate": true,
+          "StartEmulator": false,
+          "RestartEmulatorWhenAdbFailed": true,
+          "EmulatorPath": "D:\\OneDrive\\win\\桌面\\#1 MuMu安卓设备-1.lnk",
+          "EmulatorAddCommand": "",
+          "EmulatorWaitSeconds": 60
+        },
+        "WindowTitlePrefix": "",
+        "PostActions": "ExitEmulator, ExitSelf",
+        "AchievementPopupDisabled": false,
+        "AchievementPopupAutoClose": false
+      },
+      "Toolbox": {
+        "OperBoxExportFormat": "Json",
+        "GachaShowDisclaimerNoMore": false,
+        "PeepTargetFps": 30,
+        "ChooseLevel3": true,
+        "ChooseLevel3Time": 540,
+        "ChooseLevel4": true,
+        "ChooseLevel4Time": 540,
+        "ChooseLevel5": true,
+        "ChooseLevel6": true,
+        "AutoSetTime": true,
+        "ShowPotential": true
+      },
+      "Copilot": {
+        "TaskList": [
+          {
+            "Name": "TO-EX-1",
+            "FilePath": "config\\copilot\\TO-EX-1.json",
+            "CopilotId": 99459,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 0
+          },
+          {
+            "Name": "TO-EX-1",
+            "FilePath": "config\\copilot\\TO-EX-1.json",
+            "CopilotId": 99459,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 1
+          },
+          {
+            "Name": "TO-EX-2",
+            "FilePath": "config\\copilot\\TO-EX-2.json",
+            "CopilotId": 99462,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 2
+          },
+          {
+            "Name": "TO-EX-2",
+            "FilePath": "config\\copilot\\TO-EX-2.json",
+            "CopilotId": 99462,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 3
+          },
+          {
+            "Name": "TO-EX-3",
+            "FilePath": "config\\copilot\\TO-EX-3.json",
+            "CopilotId": 99466,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 4
+          },
+          {
+            "Name": "TO-EX-3",
+            "FilePath": "config\\copilot\\TO-EX-3.json",
+            "CopilotId": 99466,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 5
+          },
+          {
+            "Name": "TO-EX-4",
+            "FilePath": "config\\copilot\\TO-EX-4.json",
+            "CopilotId": 99469,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 6
+          },
+          {
+            "Name": "TO-EX-4",
+            "FilePath": "config\\copilot\\TO-EX-4.json",
+            "CopilotId": 99469,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 7
+          },
+          {
+            "Name": "TO-EX-5",
+            "FilePath": "config\\copilot\\TO-EX-5.json",
+            "CopilotId": 99471,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 8
+          },
+          {
+            "Name": "TO-EX-5",
+            "FilePath": "config\\copilot\\TO-EX-5.json",
+            "CopilotId": 99471,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 9
+          },
+          {
+            "Name": "TO-EX-6",
+            "FilePath": "config\\copilot\\TO-EX-6.json",
+            "CopilotId": 99474,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 10
+          },
+          {
+            "Name": "TO-EX-6",
+            "FilePath": "config\\copilot\\TO-EX-6.json",
+            "CopilotId": 99474,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 11
+          },
+          {
+            "Name": "TO-EX-7",
+            "FilePath": "config\\copilot\\TO-EX-7.json",
+            "CopilotId": 99359,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 12
+          },
+          {
+            "Name": "TO-EX-7",
+            "FilePath": "config\\copilot\\TO-EX-7.json",
+            "CopilotId": 99359,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 13
+          },
+          {
+            "Name": "TO-EX-8",
+            "FilePath": "config\\copilot\\TO-EX-8.json",
+            "CopilotId": 99365,
+            "IsRaid": false,
+            "IsChecked": false,
+            "Index": 14
+          },
+          {
+            "Name": "TO-EX-8",
+            "FilePath": "config\\copilot\\TO-EX-8.json",
+            "CopilotId": 99365,
+            "IsRaid": true,
+            "IsChecked": false,
+            "Index": 15
+          }
+        ],
+        "EnableUserAdditional": false,
+        "UserAdditional": [],
+        "SupportMode": "WhenNeeded",
+        "SelectFormation": 1,
+        "LoopTimes": 1
+      },
+      "TaskSelectedIndex": 2
+    }
+  },
+  "Timers": {
+    "ForceScheduledStart": false,
+    "ShowWindowBeforeForceScheduledStart": false,
+    "CustomConfig": false,
+    "List": [
+      {
+        "Id": 0,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 9,
+        "Minute": 0
+      },
+      {
+        "Id": 1,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 21,
+        "Minute": 0
+      },
+      {
+        "Id": 2,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 6,
+        "Minute": 0
+      },
+      {
+        "Id": 3,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 9,
+        "Minute": 0
+      },
+      {
+        "Id": 4,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 12,
+        "Minute": 0
+      },
+      {
+        "Id": 5,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 15,
+        "Minute": 0
+      },
+      {
+        "Id": 6,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 18,
+        "Minute": 0
+      },
+      {
+        "Id": 7,
+        "IsEnabled": false,
+        "Config": "Default",
+        "Hour": 21,
+        "Minute": 0
+      }
+    ]
+  },
+  "ConfigVersion": 1,
+  "Current": "Default",
+  "Update": {
+    "Name": "v6.16.8",
+    "UpdatePackage": "",
+    "IsFirstBoot": false,
+    "DoNotShowUpdate": false,
+    "VersionType": "Stable",
+    "AllowNightlyUpdates": false,
+    "HasAcknowledgedNightlyWarning": false,
+    "UpdateSource": "Github",
+    "ForceGithubGlobalSource": true,
+    "MirrorChyanCdk": "",
+    "MirrorChyanCdkExpiredTime": 0,
+    "CheckOnStartup": true,
+    "CheckOnSchedule": true,
+    "Proxy": "",
+    "ProxyType": "Http",
+    "AutoDownloadUpdatePackage": true,
+    "AutoInstallUpdatePackage": true,
+    "ShowUpdaterConsole": false,
+    "ShowUpdaterProgress": true
+  },
+  "AnnouncementInfo": {
+    "DoNotShowAgain": true,
+    "DoNotShow": false
+  },
+  "Gui": {
+    "DarkMode": "SyncWithOs",
+    "UseNotify": true,
+    "MainTasksInvertNullFunction": false,
+    "Localization": "zh-cn",
+    "OperNameLanguage": "OperNameLanguageMAA",
+    "UseTray": true,
+    "MinimizeToTray": true,
+    "MinimizeOnStartup": true,
+    "HideCloseButton": true,
+    "WindowTitleSelectShowList": "2 3 4",
+    "WindowTitleScrollable": false,
+    "LogItemDateFormat": "HH:mm:ss",
+    "WindowPlacement": {
+      "Length": 44,
+      "Flags": 0,
+      "ShowCmd": 2,
+      "MinPosition": {
+        "X": 0,
+        "Y": 2060
+      },
+      "MaxPosition": {
+        "X": -1,
+        "Y": -1
+      },
+      "NormalPosition": {
+        "Left": 262,
+        "Top": 55,
+        "Right": 1462,
+        "Bottom": 955
+      }
+    },
+    "LoadWindowPlacement": true,
+    "SaveWindowPlacement": true,
+    "InverseClearMode": "Clear",
+    "TaskQueueInverseMode": false,
+    "UseCardLog": true,
+    "MaxNumberOfLogThumbnails": 100,
+    "SoberLanguage": "zh-cn",
+    "Hangover": false,
+    "LastBuyWineTime": "2026-07-01T00:00:00+08:00",
+    "CustomCulture": "",
+    "IgnoreBadModulesAndUseSoftwareRendering": false,
+    "OverlayTarget": {
+      "ProcessId": 0,
+      "Hwnd": 0
+    },
+    "SettingOrders": [
+      "SwitchConfiguration",
+      "ScheduleSettings",
+      "PerformanceSettings",
+      "GameSettings",
+      "ConnectionSettings",
+      "StartupSettings",
+      "RemoteControlSettings",
+      "UiSettings",
+      "BackgroundSettings",
+      "ExternalNotificationSettings",
+      "HotKeySettings",
+      "AchievementSettings",
+      "UpdateSettings",
+      "IssueReport",
+      "AboutUs"
+    ],
+    "CollapesStates": [
+      "IssueReport"
+    ],
+    "HotKeys": {
+      "ShowGui": {
+        "Key": "M",
+        "Modifiers": "Alt, Control, Shift"
+      },
+      "LinkStart": {
+        "Key": "L",
+        "Modifiers": "Alt, Control, Shift"
+      }
+    },
+    "GuideStep": 7,
+    "Background": {
+      "ImagePath": "",
+      "StretchMode": "Fill",
+      "Opacity": 10,
+      "BlurEffectRadius": 0
+    },
+    "BackgroundMonetEnabled": false,
+    "BackgroundMonetMode": "Auto",
+    "BackgroundMonetCustomColor": "#326CF3",
+    "BackgroundMonetCachedColor": ""
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "stage_name": "TO-1",
+  "opers": [
+    {
+      "name": "娜仁图亚",
+      "skill": 1,
+      "skill_usage": 0,
+      "skill_times": 1,
+      "requirements": {
+        "elite": 2,
+        "level": 0,
+        "skill_level": 10,
+        "module": 1,
+        "potentiality": 0
+      }
+    },
+    {
+      "name": "逻各斯",
+      "skill": 1,
+      "skill_usage": 0,
+      "skill_times": 1,
+      "requirements": {
+        "elite": null,
+        "level": 0,
+        "skill_level": 10,
+        "module": 4,
+        "potentiality": 0
+      }
+    },
+    {
+      "name": "圣聆初雪",
+      "skill": 2,
+      "skill_usage": 0,
+      "skill_times": 1,
+      "requirements": {
+        "elite": null,
+        "level": 0,
+        "skill_level": 10,
+        "module": 2,
+        "potentiality": 0
+      }
+    },
+    {
+      "name": "遥",
+      "skill": 2,
+      "skill_usage": 0,
+      "skill_times": 1,
+      "requirements": {
+        "elite": null,
+        "level": 0,
+        "skill_level": 10,
+        "module": 2,
+        "potentiality": 0
+      }
+    }
+  ],
+  "groups": [],
+  "actions": [
+    {
+      "type": "Deploy",
+      "kills": 0,
+      "costs": 0,
+      "cost_changes": 0,
+      "cooling": -1,
+      "name": "娜仁图亚",
+      "location": [
+        3,
+        3
+      ],
+      "direction": "Up",
+      "skill_usage": 0,
+      "skill_times": 1,
+      "pre_delay": 0,
+      "post_delay": 0,
+      "distance": null,
+      "doc": null,
+      "doc_color": null
+    },
+    {
+      "type": "SkillUsage",
+      "kills": 0,
+      "costs": 0,
+      "cost_changes": 0,
+      "cooling": -1,
+      "name": "娜仁图亚",
+      "location": null,
+      "direction": null,
+      "skill_usage": 2,
+      "skill_times": 1,
+      "pre_delay": 0,
+      "post_delay": 0,
+      "distance": null,
+      "doc": null,
+      "doc_color": null
+    },
+    {
+      "type": "SpeedUp",
+      "kills": 0,
+      "costs": 0,
+      "cost_changes": 0,
+      "cooling": -1,
+      "name": null,
+      "location": null,
+      "direction": null,
+      "skill_usage": 0,
+      "skill_times": 1,
+      "pre_delay": 0,
+      "post_delay": 0,
+      "distance": null,
+      "doc": null,
+      "doc_color": null
+    },
+    {
+      "type": "SkillDaemon",
+      "kills": 0,
+      "costs": 0,
+      "cost_changes": 0,
+      "cooling": -1,
+      "name": null,
+      "location": null,
+      "direction": null,
+      "skill_usage": 0,
+      "skill_times": 1,
+      "pre_delay": 0,
+      "post_delay": 0,
+      "distance": null,
+      "doc": null,
+      "doc_color": null
+    }
+  ],
+  "difficulty": 1,
+  "minimum_required": "v6.0.0",
+  "doc": {
+    "title": "TO-1 收信地：终点 - 一摆到底",
+    "title_color": null,
+    "details": "原作者：萧然Q\n【【直到大地变成一颗酸橙】TO-1至TO-9一摆到底合集版 摆完挂机 简单好抄】 https://www.bilibili.com/video/BV12pG36gEFr/?share_source=copy_web&vd_source=58a7a850d4007578902a9cac2c582417",
+    "details_color": null
+  }
+}

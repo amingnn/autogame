@@ -223,5 +223,9 @@ config.yaml
 config.yaml.bak
 config.yaml.lock
 config.yaml.tmp
+data/config.yaml
+data/config.yaml.bak
+data/config.yaml.lock
+data/config.yaml.tmp
 logs/
 data/

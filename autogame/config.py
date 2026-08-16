@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from ruamel.yaml import YAML
 
 
@@ -15,6 +15,7 @@ class AppPaths(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     root: Path
+    config_file_override: Path | None = Field(default=None, exclude=True)
 
     @classmethod
     def default(cls) -> "AppPaths":
@@ -24,7 +25,7 @@ class AppPaths(BaseModel):
 
     @property
     def config_file(self) -> Path:
-        return self.root / "config.yaml"
+        return self.config_file_override or self.root / "config.yaml"
 
     @property
     def log_dir(self) -> Path:
@@ -60,6 +61,27 @@ class SystemConfig(BaseModel):
     server_chan_key: str = ""
 
 
+class SkylandAccountConfig(BaseModel):
+    """森空岛手机号登录配置。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    phone: str = ""
+    password: SecretStr = Field(default_factory=lambda: SecretStr(""))
+
+    @property
+    def has_any_value(self) -> bool:
+        """返回是否填写过手机号或密码。"""
+
+        return bool(self.phone.strip() or self.password.get_secret_value())
+
+    @property
+    def is_complete(self) -> bool:
+        """返回手机号和密码是否均已填写。"""
+
+        return bool(self.phone.strip() and self.password.get_secret_value())
+
+
 class TaskConfig(BaseModel):
     """单个自动化任务的用户配置。"""
 
@@ -68,6 +90,7 @@ class TaskConfig(BaseModel):
     enabled: bool = False
     interval_hours: float = Field(default=24.0, ge=0)
     script_path: str = ""
+    account: SkylandAccountConfig | None = None
 
 
 class Config(BaseModel):
@@ -95,8 +118,20 @@ class Config(BaseModel):
     def load(cls, path: Path | None = None) -> "Config":
         """从 YAML 文件读取并校验配置。"""
 
-        paths = AppPaths(root=Path(path).resolve().parent) if path else AppPaths.default()
-        config_path = Path(path) if path else paths.config_file
+        if path:
+            config_path = Path(path).resolve()
+            root = (
+                config_path.parent.parent
+                if config_path.parent.name.lower() == "data"
+                else config_path.parent
+            )
+            paths = AppPaths(
+                root=root,
+                config_file_override=config_path,
+            )
+        else:
+            paths = AppPaths.default()
+            config_path = paths.config_file
         if not config_path.exists():
             return cls(paths=paths)
 

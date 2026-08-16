@@ -1,0 +1,46 @@
+{
+  "Configurations": {
+    "Default": {
+      "GUI.MaxNumberOfLogThumbnails": "100",
+      "GUI.UseCardLog": "True",
+      "Infrast.DefaultInfrast": "243_layout_3_times_a_day.json",
+      "Infrast.InfrastMode": "Rotation"
+    }
+  },
+  "Current": "Default",
+  "Global": {
+    "Timer.Timer1": "False",
+    "Timer.Timer1.Config": "Default",
+    "Timer.Timer1Hour": "9",
+    "Timer.Timer1Min": "0",
+    "Timer.Timer2": "False",
+    "Timer.Timer2.Config": "Default",
+    "Timer.Timer2Hour": "21",
+    "Timer.Timer2Min": "0",
+    "Timer.Timer3": "False",
+    "Timer.Timer3.Config": "Default",
+    "Timer.Timer3Hour": "6",
+    "Timer.Timer3Min": "0",
+    "Timer.Timer4": "False",
+    "Timer.Timer4.Config": "Default",
+    "Timer.Timer4Hour": "9",
+    "Timer.Timer4Min": "0",
+    "Timer.Timer5": "False",
+    "Timer.Timer5.Config": "Default",
+    "Timer.Timer5Hour": "12",
+    "Timer.Timer5Min": "0",
+    "Timer.Timer6": "False",
+    "Timer.Timer6.Config": "Default",
+    "Timer.Timer6Hour": "15",
+    "Timer.Timer6Min": "0",
+    "Timer.Timer7": "False",
+    "Timer.Timer7.Config": "Default",
+    "Timer.Timer7Hour": "18",
+    "Timer.Timer7Min": "0",
+    "Timer.Timer8": "False",
+    "Timer.Timer8.Config": "Default",
+    "Timer.Timer8Hour": "21",
+    "Timer.Timer8Min": "0",
+    "VersionUpdate.body": ""
+  }
+}

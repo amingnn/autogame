@@ -18,11 +18,19 @@ class ConfigTests(unittest.TestCase):
 
     def test_paths_keep_runtime_data_outside_source_package(self) -> None:
         paths = AppPaths(root=Path("D:/demo"))
+        self.assertEqual(paths.config_file, Path("D:/demo/config.yaml"))
         self.assertEqual(paths.state_file, Path("D:/demo/data/state.json"))
         self.assertEqual(
             paths.skyland_token_file,
             Path("D:/demo/data/skyland_sign/token.txt"),
         )
+
+    def test_explicit_config_path_is_preserved(self) -> None:
+        config = Config.load(Path("D:/demo/custom.yaml"))
+        self.assertEqual(config.cfg_path, Path("D:/demo/custom.yaml"))
+
+        data_config = Config.load(Path("D:/demo/data/config.yaml"))
+        self.assertEqual(data_config.db_path, Path("D:/demo/data/state.json"))
 
     def test_save_preserves_comments_backup_and_revision(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

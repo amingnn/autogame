@@ -1,0 +1,27 @@
+system:
+  log_level: "INFO"
+  automation_timeout_minutes: 90  # 自动化会话超时（分钟）
+  completion_action: "sleep"      # sleep / shutdown / hibernate / none
+  completion_action_delay_seconds: 60
+  server_chan_enabled: false
+  server_chan_key: "your_key_here"
+
+tasks:
+  skyland_sign:
+    enabled: true
+    interval_hours: 20
+    # 可选：缓存 Token 失效时使用手机号密码刷新并更新 Token。
+    # 不填写时无法刷新失效的 data/skyland_sign/token.txt。
+    account:
+      phone: ""
+      password: ""
+
+  maa:
+    enabled: true
+    interval_hours: 3
+    script_path: "D:\\game\\MAA-v6.13.0-win-x64\\MAA.exe"
+
+  maaend:
+    enabled: true
+    interval_hours: 20
+    script_path: "D:\\game\\MaaEnd-win-x86_64-v2.18.0\\MaaEnd.exe"
