@@ -71,6 +71,17 @@ class DesktopBridge:
 
         return self._execute(self._backend.manager.get_status_snapshot)
 
+    def get_server_chan_key(self) -> dict[str, object]:
+        """仅在用户主动查看时返回已保存的 Server 酱 Key。"""
+
+        try:
+            return {
+                "ok": True,
+                "data": {"key": self._backend.manager.config.system.server_chan_key},
+            }
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
     def run_task(self, task_name: str, force: bool = False) -> dict[str, object]:
         """从桌面手动启动指定任务。"""
 

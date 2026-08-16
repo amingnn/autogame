@@ -96,7 +96,7 @@ def run_desktop_app(config: Config) -> None:
         import webview
     except ImportError as exc:
         raise RuntimeError(
-            "缺少桌面依赖，请执行 uv sync --extra desktop"
+            "缺少桌面依赖，请执行 uv sync"
         ) from exc
 
     backend = DesktopBackend(config)

@@ -54,6 +54,8 @@ class DesktopTests(unittest.TestCase):
             status = bridge.get_status()
             self.assertTrue(status["ok"])
             self.assertNotIn("secret-value", str(status))
+            revealed = bridge.get_server_chan_key()
+            self.assertEqual(revealed["data"]["key"], "secret-value")  # type: ignore[index]
             revision = status["data"]["config_revision"]  # type: ignore[index]
 
             result = bridge.update_task_config(
@@ -87,7 +89,11 @@ class DesktopTests(unittest.TestCase):
             coroutine.close()  # type: ignore[attr-defined]
 
         with (
-            patch.object(main, "_parse_args", return_value=argparse.Namespace(automation=True)),
+            patch.object(
+                main,
+                "_parse_args",
+                return_value=argparse.Namespace(automation=True, force=False),
+            ),
             patch.object(main.Config, "load", return_value=config),
             patch("asyncio.run", side_effect=close_coroutine),
         ):
@@ -99,3 +105,10 @@ class DesktopTests(unittest.TestCase):
             arguments = main._parse_args()
 
         self.assertTrue(arguments.automation)
+
+    def test_force_automation_argument(self) -> None:
+        with patch.object(sys, "argv", ["main.py", "-a", "-f"]):
+            arguments = main._parse_args()
+
+        self.assertTrue(arguments.automation)
+        self.assertTrue(arguments.force)

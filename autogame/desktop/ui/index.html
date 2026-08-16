@@ -98,12 +98,11 @@
           </div>
           <div class="settings-form">
             <div class="detail-field"><label>日志级别</label><select id="systemLogLevel"><option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
-            <div class="detail-field"><label>完成动作延迟（秒）</label><input id="systemDelay" type="number" min="0"></div>
-            <div class="detail-field"><label>自动化超时（分钟）</label><input id="systemTimeout" type="number" min="1" step="1"></div>
-            <div class="detail-field"><label>完成动作</label><select id="systemCompletionAction"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
-            <label class="check-field"><input id="systemServerChanEnabled" type="checkbox"> <span>发送 Server 酱通知</span></label>
-            <div class="detail-field full-field"><label>Server 酱 SendKey（留空保持原值）</label><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="已配置时不会回显"></div>
-            <label class="check-field full-field"><input id="clearSendKey" type="checkbox"> <span>清除已保存的 SendKey</span></label>
+            <div class="detail-field"><label>超时时间（分钟）</label><input id="systemTimeout" type="number" min="1" step="1"></div>
+            <div class="detail-field"><label>完成后动作</label><select id="systemCompletionAction"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
+            <div class="detail-field"><label>完成动作延时（秒）</label><input id="systemDelay" type="number" min="0"></div>
+            <label class="check-field"><input id="systemServerChanEnabled" type="checkbox"> <span>发送 Server 酱通知</span><span class="field-help" tabindex="0" title="仅在全部运行时生效" aria-label="仅在全部运行时生效">?</span></label>
+            <div class="detail-field full-field"><label>Server 酱 Key</label><div class="secret-input-wrap"><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="未配置"><button class="field-icon-button" id="toggleServerKey" type="button" title="显示 Server 酱 Key" aria-label="显示 Server 酱 Key"></button></div></div>
           </div>
           <div class="info-card">
             <p>任务和全局配置保存后会写入根目录 <code>config.yaml</code>，程序会校验、备份并重新加载。</p>

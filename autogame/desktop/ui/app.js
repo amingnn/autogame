@@ -100,6 +100,8 @@ let previewMode = false;
 let refreshTimer = null;
 let batchRunActive = false;
 let logsCleared = false;
+let settingsDirty = false;
+const taskConfigOpenByName = {};
 
 function hasDesktopApi() {
   return Boolean(window.pywebview?.api);
@@ -210,29 +212,66 @@ function renderTaskDetails() {
   content.className = "detail-content";
   const completionDescription = task.waiting_for_completion ? "正在监听脚本进程和任务日志" : task.completion_description;
   const isRunning = ["starting", "running"].includes(task.state);
+  const intervalText = `${task.interval_hours} 小时`;
+  const lastSuccessText = formatTime(task.last_success_at);
+  const configWasOpen = taskConfigOpenByName[task.name] === true;
   content.innerHTML = `<div class="detail-overview">
       <div><span class="eyebrow">运行状态</span><p>${escapeHtml(completionDescription)}<br>耗时：${formatDuration(task.elapsed_seconds)}<br>最近完成：${formatTime(task.last_success_at)}${task.last_error ? `<br>错误：${escapeHtml(task.last_error)}` : ""}</p></div>
       ${renderStatusBadge(task)}
     </div>
-    <div class="detail-field"><label>是否启用</label><select id="taskEnabled"><option value="true" ${task.enabled ? "selected" : ""}>启用</option><option value="false" ${!task.enabled ? "selected" : ""}>禁用</option></select></div>
-    <div class="detail-field"><label>间隔时间（小时）</label><input id="taskInterval" type="number" min="0" step="0.1" value="${task.interval_hours}"></div>
-    ${renderScriptForm(task)}
-    <div class="detail-save-row"><button class="primary-button" id="detailSave">保存配置</button></div>
-    <div class="detail-actions"><div class="detail-run-actions"><button class="secondary-button" id="detailForceRun" ${isRunning ? "disabled" : ""}>⚡ 强制运行</button><button class="secondary-button" id="detailRun">${isRunning ? "⏸ 暂停" : "▶ 运行"}</button></div></div>`;
+    <div class="task-overview-stats">
+      <div class="overview-stat"><span>任务状态</span><strong>${escapeHtml(stateLabels[task.state] || task.state)}</strong></div>
+      <div class="overview-stat"><span>执行间隔</span><strong>${escapeHtml(intervalText)}</strong></div>
+      <div class="overview-stat"><span>最近完成</span><strong>${escapeHtml(lastSuccessText)}</strong></div>
+    </div>
+    <div class="overview-hint"><span class="status-dot"></span> 右侧日志显示当前会话的实时输出</div>
+    <details class="config-section">
+      <summary><span>任务配置</span><span class="config-summary">启用状态、执行间隔${task.requires_script ? "、脚本路径" : ""}</span></summary>
+      <div class="config-section-body">
+        <div class="detail-field"><label>是否启用</label><select id="taskEnabled"><option value="true" ${task.enabled ? "selected" : ""}>启用</option><option value="false" ${!task.enabled ? "selected" : ""}>禁用</option></select></div>
+        <div class="detail-field"><label>间隔时间（小时）</label><input id="taskInterval" type="number" min="0" step="0.1" value="${task.interval_hours}"></div>
+        ${renderScriptForm(task)}
+        <div class="detail-save-row"><button class="primary-button" id="detailSave">保存配置</button></div>
+      </div>
+    </details>
+    <div class="detail-actions"><div class="detail-run-actions"><button class="secondary-button force-button" id="detailForceRun" ${isRunning ? "disabled" : ""}>⚡ 强制运行</button><button class="secondary-button" id="detailRun">${isRunning ? "⏸ 暂停" : "▶ 运行"}</button></div></div>`;
+  const configSection = content.querySelector(".config-section");
+  if (configSection) {
+    configSection.open = configWasOpen;
+    configSection.addEventListener("toggle", () => {
+      taskConfigOpenByName[task.name] = configSection.open;
+    });
+  }
   document.getElementById("detailRun").onclick = () => (isRunning ? stopTask(task.name) : runTask(task.name, false));
   document.getElementById("detailForceRun").onclick = () => runTask(task.name, true);
   document.getElementById("detailSave").onclick = saveTask;
 }
 
+function resetServerKeyField(configured = Boolean(currentState?.system?.server_chan_key_configured)) {
+  const input = document.getElementById("systemSendKey");
+  const button = document.getElementById("toggleServerKey");
+  if (!input || !button) return;
+  input.type = "password";
+  input.value = configured ? "••••••••••••" : "";
+  input.dataset.masked = String(configured);
+  input.dataset.keyLoaded = "false";
+  button.title = "显示 Server 酱 Key";
+  button.setAttribute("aria-label", button.title);
+  button.innerHTML = `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5Z"></path><circle cx="12" cy="12" r="2.2"></circle></svg>`;
+}
+
 function renderSystemConfig() {
   const system = currentState?.system;
   if (!system) return;
+  const section = document.getElementById("settingsSection");
+  if (settingsDirty && !section.classList.contains("hidden")) return;
   document.getElementById("systemLogLevel").value = system.log_level;
-  document.getElementById("systemDelay").value = system.completion_action_delay_seconds;
   document.getElementById("systemTimeout").value = system.automation_timeout_minutes;
   document.getElementById("systemCompletionAction").value = system.completion_action;
+  document.getElementById("systemDelay").value = system.completion_action_delay_seconds;
   document.getElementById("systemServerChanEnabled").checked = system.server_chan_enabled;
   document.getElementById("systemSendKey").placeholder = system.server_chan_key_configured ? "已配置，留空保持原值" : "未配置";
+  resetServerKeyField(system.server_chan_key_configured);
 }
 
 function renderAll() {
@@ -382,19 +421,19 @@ async function saveSystemConfig() {
   const sendKey = document.getElementById("systemSendKey").value.trim();
   const patch = {
     log_level: document.getElementById("systemLogLevel").value,
-    completion_action_delay_seconds: Number(document.getElementById("systemDelay").value),
     automation_timeout_minutes: Number(document.getElementById("systemTimeout").value),
     completion_action: document.getElementById("systemCompletionAction").value,
+    completion_action_delay_seconds: Number(document.getElementById("systemDelay").value),
     server_chan_enabled: document.getElementById("systemServerChanEnabled").checked,
-    clear_server_chan_key: document.getElementById("clearSendKey").checked,
     config_revision: currentState.config_revision,
   };
-  if (sendKey) patch.server_chan_key = sendKey;
+  if (sendKey && document.getElementById("systemSendKey").dataset.masked !== "true") {
+    patch.server_chan_key = sendKey;
+  }
   try {
     const result = await callDesktop("update_system_config", patch);
-    document.getElementById("systemSendKey").value = "";
-    document.getElementById("clearSendKey").checked = false;
     showToast(result.message || "全局配置已保存");
+    settingsDirty = false;
     setSettingsOpen(false);
     await refreshStatus();
   } catch (error) { showToast(error.message, true); }
@@ -454,8 +493,44 @@ async function openLogsFolder() {
 
 function setSettingsOpen(open) {
   const section = document.getElementById("settingsSection");
+  if (open) {
+    settingsDirty = false;
+    renderSystemConfig();
+  } else {
+    settingsDirty = false;
+    resetServerKeyField();
+  }
   section.classList.toggle("hidden", !open);
   section.setAttribute("aria-hidden", String(!open));
+}
+
+async function toggleServerKeyVisibility() {
+  const input = document.getElementById("systemSendKey");
+  const button = document.getElementById("toggleServerKey");
+  if (!input || !button) return;
+  settingsDirty = true;
+  if (input.type === "password") {
+    if (input.dataset.masked === "true" || !input.value) {
+      try {
+        const key = previewMode ? "SCT-preview-key" : (await callDesktop("get_server_chan_key")).data?.key || "";
+        input.value = key;
+        input.dataset.masked = "false";
+        input.dataset.keyLoaded = "true";
+      } catch (error) {
+        showToast(error.message, true);
+        return;
+      }
+    }
+    input.type = "text";
+    button.title = "隐藏 Server 酱 Key";
+    button.setAttribute("aria-label", button.title);
+    button.innerHTML = `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 16"></path><path d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6.3 0 9.5 6 9.5 6a17 17 0 0 1-3 3.8M6.3 6.4C3.8 8 2.5 12 2.5 12a17 17 0 0 0 5.2 4.8A10.5 10.5 0 0 0 12 18c1.1 0 2.1-.2 3-.5"></path><path d="M9.8 9.8a3 3 0 0 0 4.4 4.4"></path></svg>`;
+    return;
+  }
+  input.type = "password";
+  button.title = "显示 Server 酱 Key";
+  button.setAttribute("aria-label", button.title);
+  button.innerHTML = `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5Z"></path><circle cx="12" cy="12" r="2.2"></circle></svg>`;
 }
 
 async function runWindowAction(method) {
@@ -571,6 +646,16 @@ document.getElementById("settingsButton").onclick = () => setSettingsOpen(true);
 document.getElementById("closeSettingsButton").onclick = () => setSettingsOpen(false);
 document.getElementById("cancelSettingsButton").onclick = () => setSettingsOpen(false);
 document.getElementById("saveSystemConfigButton").onclick = saveSystemConfig;
+document.getElementById("toggleServerKey").onclick = toggleServerKeyVisibility;
+document.getElementById("systemSendKey").addEventListener("focus", (event) => {
+  const input = event.currentTarget;
+  if (input.dataset.masked === "true") {
+    input.value = "";
+    input.dataset.masked = "false";
+  }
+});
+document.getElementById("settingsSection").addEventListener("input", () => { settingsDirty = true; });
+document.getElementById("settingsSection").addEventListener("change", () => { settingsDirty = true; });
 document.getElementById("topRunButton").onclick = () => (batchRunActive ? stopAllTasks() : runAllTasks());
 document.getElementById("minimizeButton").onclick = () => runWindowAction("minimize_window");
 document.getElementById("closeButton").onclick = () => runWindowAction("close_window");
