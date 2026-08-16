@@ -10,7 +10,9 @@
 D:\project\autogame
 ├── main.py                         # 唯一命令入口
 ├── config.yaml                     # 当前电脑正式配置
-├── config.example.yaml             # 配置模板
+├── examples/
+│   ├── config.example.yaml         # 完整配置模板
+│   └── maa-config.example.yaml     # MAA/MaaEnd 配置示例
 ├── autogame/
 │   ├── config.py                   # 用户配置模型和应用路径
 │   ├── config_store.py             # 配置安全保存
@@ -46,6 +48,8 @@ D:\project\autogame
 │           ├── token_store.py      # Token 读取和保存
 │           └── security_sm.py      # 设备标识签名实现
 ├── data/                           # 本地运行数据，不提交版本库
+│   ├── maa/config/                 # MAA 配置和自定义 copilot 脚本
+│   ├── maaend/config/              # MaaEnd 配置
 │   ├── state.json                  # 最近成功时间
 │   ├── locks/                      # 自动化和任务锁文件
 │   └── skyland_sign/token.txt      # 森空岛 Token
@@ -74,7 +78,7 @@ flowchart TD
 
 - 桌面和自动化都依赖 `TaskManager`；
 - `TaskManager` 不导入桌面或自动化；
-- 自动化模式不导入 pywebview；
+- 自动化模式不创建桌面窗口或调用 pywebview；pywebview 是项目必选依赖；
 - 任务模块通过 `runtime/` 使用进程、日志和锁能力；
 - `runtime/` 不知道具体任务名称。
 
@@ -84,16 +88,16 @@ flowchart TD
 
 主要函数：
 
-- `main()`：解析启动参数、加载 `config.yaml`、配置日志，并按需导入桌面或自动化入口。
+- `main()`：解析启动参数、加载根目录 `config.yaml`、配置日志，并按需导入桌面或自动化入口。
 
-桌面模块使用延迟导入，因此自动化模式没有 pywebview 运行时依赖。
+桌面模块使用延迟导入，因此自动化模式不会创建窗口或调用 pywebview；pywebview 本身是项目必选依赖。
 
 ### 3.2 桌面模式
 
 执行：
 
 ```powershell
-uv run --extra desktop python main.py
+uv run python main.py
 ```
 
 流程：
@@ -113,6 +117,8 @@ uv run --extra desktop python main.py
 ```powershell
 uv run python main.py -a
 ```
+
+使用 `uv run python main.py -a -f` 时，自动化模式会跳过冷却判断，运行全部已启用任务；禁用任务仍会跳过。
 
 流程：
 
@@ -233,23 +239,21 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 
 ### 6.2 `autogame/tasks/process_script.py`
 
-- `ProcessScriptSpec`：定义脚本进程、游戏进程、日志规则、启动等待和完成模式；
+- `ProcessScriptSpec`：定义脚本进程、日志规则、启动超时和完成模式；
 - `TaskLogLine`：保存清洗后的业务日志及是否进入推送；
 - `ProcessRun`：保存一次外部脚本运行的进程与日志状态；
 - `LogObservation`：保存一次增量日志解析结果；
-- `ProcessScriptAdapter.start()`：建立日志基线，启动游戏，等待就绪后启动脚本；
+- `ProcessScriptAdapter.start()`：建立日志基线并启动脚本；
 - `ProcessScriptAdapter.poll()`：读取新增日志并检查脚本进程；
 - `ProcessScriptAdapter.stop()`：停止本次 AutoGame 启动的脚本进程树；
 - `ProcessScriptAdapter.observe_logs()`：提供可由具体任务覆盖的日志观察入口。
 
-游戏进程可以复用。脚本启动前只关闭可执行文件路径完全相同的旧实例，然后重新启动；其他目录下的同名进程不会被关闭。
+脚本启动前只关闭可执行文件路径完全相同的旧实例，然后重新启动；其他目录下的同名进程不会被关闭。游戏进程由外部方式管理。
 
 ### 6.3 MAA
 
 `MaaAdapter` 固定以下规则：
 
-- 启动 MuMu 并验证 `MuMuNxDevice.exe`；
-- 新启动游戏时等待 20 秒；
 - 启动用户配置的 `MAA.exe`；
 - 只读取脚本目录下 `debug/gui.log`；
 - 只展示完成、跳过、出错、整轮完成和专精等级信息；
@@ -262,8 +266,7 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 
 `MaaEndAdapter` 固定以下规则：
 
-- 启动终末地并验证 `Endfield.exe`；
-- 新启动游戏时等待 20 秒；
+- 不启动或管理终末地进程；
 - 启动用户配置的 `MaaEnd.exe`；
 - 读取 `debug/maafw.log`、`debug/maafw*.log` 和 `debug/go-service.log`；
 - `observe_logs()` 将任务事件和物资过程转换为中文展示日志；
@@ -276,9 +279,9 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 - `SkylandSignAdapter`：把内置签到转换为统一任务结果；
 - `run_sign_in()`：读取全部账号并执行多账号签到；
 - `SignInResult`：保存总体成功状态和通知消息；
-- `SkylandClient`：换取凭据、读取绑定角色并调用签到接口；
+- `SkylandClient`：使用手机号密码或通行证 Token 换取凭据、读取绑定角色并调用签到接口；
 - `SkylandClient.sign_all()`：签到当前账号全部支持角色；
-- `TokenStore.load()`：优先读取 `TOKEN` 环境变量，否则读取本地文件；
+- `TokenStore.load()`：在未配置手机号密码时，优先读取 `TOKEN` 环境变量，否则读取本地文件；
 - `TokenStore.save()`：保存去重后的 Token；
 - `TokenStore.is_configured()`：判断 Token 是否存在；
 - `TokenStore.parse()`：解析网页账号 JSON 或纯 Token；
@@ -355,8 +358,8 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 ### `autogame/automation/runner.py`
 
 - `AutomationRunner`：负责一次无界面自动化会话；
-- `AutomationRunner.run()`：获取实例锁、并发启动到期任务、处理分钟级超时、汇总通知，并在有到期任务时按配置强制执行完成动作；
-- `run_automation()`：创建并运行自动化会话。
+- `AutomationRunner.run()`：获取实例锁、并发启动到期或强制选中的任务、处理分钟级超时、汇总通知，并在有任务时按配置执行完成动作；
+- `run_automation()`：创建并运行自动化会话，可通过 `force=True` 跳过冷却。
 
 自动化层只负责策略，任务启动和状态变化仍由 `TaskManager` 完成。
 
@@ -395,7 +398,7 @@ SendKey 不会出现在桌面状态、普通日志或页面响应中。
 1. 在 `autogame/tasks/` 新增任务文件；
 2. 复用 `ProcessScriptAdapter` 并声明固定进程和日志规则；
 3. 在 `registry.py` 注册任务工厂；
-4. 在 `config.example.yaml` 增加用户需要填写的最少字段；
+4. 在 `examples/config.example.yaml` 增加用户需要填写的最少字段；
 5. 增加启动、日志、退出和失败测试。
 
 ### 内置业务任务
