@@ -92,7 +92,11 @@ class DesktopTests(unittest.TestCase):
             patch.object(
                 main,
                 "_parse_args",
-                return_value=argparse.Namespace(automation=True, force=False),
+                return_value=argparse.Namespace(
+                    automation=True,
+                    force=False,
+                    server_chan=False,
+                ),
             ),
             patch.object(main.Config, "load", return_value=config),
             patch("asyncio.run", side_effect=close_coroutine),
@@ -105,6 +109,7 @@ class DesktopTests(unittest.TestCase):
             arguments = main._parse_args()
 
         self.assertTrue(arguments.automation)
+        self.assertFalse(arguments.server_chan)
 
     def test_force_automation_argument(self) -> None:
         with patch.object(sys, "argv", ["main.py", "-a", "-f"]):
@@ -112,3 +117,10 @@ class DesktopTests(unittest.TestCase):
 
         self.assertTrue(arguments.automation)
         self.assertTrue(arguments.force)
+
+    def test_server_chan_automation_argument(self) -> None:
+        with patch.object(sys, "argv", ["main.py", "-a", "-s"]):
+            arguments = main._parse_args()
+
+        self.assertTrue(arguments.automation)
+        self.assertTrue(arguments.server_chan)

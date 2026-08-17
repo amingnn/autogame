@@ -64,7 +64,7 @@ D:\project\autogame
 flowchart TD
     A["main.py"] --> B{"启动参数"}
     B -->|"默认"| C["desktop/app.py"]
-    B -->|"-a / --automation"| D["automation/runner.py"]
+    B -->|"-a / --automation [-f] [-s]"| D["automation/runner.py"]
     C --> E["DesktopBridge"]
     E --> F["TaskManager"]
     D --> F
@@ -118,7 +118,7 @@ uv run python main.py
 uv run python main.py -a
 ```
 
-使用 `uv run python main.py -a -f` 时，自动化模式会跳过冷却判断，运行全部已启用任务；禁用任务仍会跳过。
+使用 `uv run python main.py -a -f` 时，自动化模式会跳过冷却判断，运行全部已启用任务；禁用任务仍会跳过。追加 `-s` 或 `--server-chan` 可强制推送本次报告到 Server 酱。
 
 流程：
 
@@ -129,7 +129,7 @@ uv run python main.py -a
 -> 有到期任务时按配置强制执行完成动作 -> 退出
 ```
 
-自动化只在进程启动时扫描一次到期任务。每天 07:00 和 19:00 的触发由 Windows 计划任务负责。
+自动化只在进程启动时扫描一次到期任务。每天 07:00 和 19:00 的触发由 Windows 计划任务负责，计划任务使用 `python main.py -a -f -s` 强制运行并推送 Server 酱。
 
 ## 4. 任务状态
 
@@ -359,7 +359,7 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 
 - `AutomationRunner`：负责一次无界面自动化会话；
 - `AutomationRunner.run()`：获取实例锁、并发启动到期或强制选中的任务、处理分钟级超时、汇总通知，并在有任务时按配置执行完成动作；
-- `run_automation()`：创建并运行自动化会话，可通过 `force=True` 跳过冷却。
+- `run_automation()`：创建并运行自动化会话，可通过 `force=True` 跳过冷却、`server_chan=True` 强制推送 Server 酱。
 
 自动化层只负责策略，任务启动和状态变化仍由 `TaskManager` 完成。
 

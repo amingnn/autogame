@@ -24,6 +24,12 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="自动化模式下忽略冷却，运行所有已启用任务",
     )
+    parser.add_argument(
+        "-s",
+        "--server-chan",
+        action="store_true",
+        help="自动化模式下推送本次报告到 Server 酱",
+    )
     return parser.parse_args()
 
 
@@ -31,8 +37,8 @@ def main() -> None:
     """根据启动参数进入桌面模式或自动化模式。"""
 
     arguments = _parse_args()
-    if arguments.force and not arguments.automation:
-        raise SystemExit("-f/--force 只能与 -a/--automation 一起使用")
+    if (arguments.force or arguments.server_chan) and not arguments.automation:
+        raise SystemExit("-f/--force 和 -s/--server-chan 只能与 -a/--automation 一起使用")
     config = Config.load()
     configure_logging(config.log_dir, config.system.log_level, force=True)
     mlog.info("配置加载完成")
@@ -42,7 +48,13 @@ def main() -> None:
 
         from autogame.automation import run_automation
 
-        asyncio.run(run_automation(config, force=arguments.force))
+        asyncio.run(
+            run_automation(
+                config,
+                force=arguments.force,
+                server_chan=arguments.server_chan,
+            )
+        )
     else:
         from autogame.desktop import run_desktop_app
 

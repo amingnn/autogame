@@ -16,9 +16,15 @@ from autogame.task_manager import TaskManager
 class AutomationRunner:
     """负责一次计划任务触发后的自动化策略。"""
 
-    def __init__(self, config: Config, force: bool = False) -> None:
+    def __init__(
+        self,
+        config: Config,
+        force: bool = False,
+        server_chan: bool = False,
+    ) -> None:
         self.config = config
         self.force = force
+        self.server_chan = server_chan
         self.manager = TaskManager(config)
         self._instance_lock = ExecutionLock(config.paths.lock_dir)
         self._power = PowerController()
@@ -90,20 +96,28 @@ class AutomationRunner:
         )
         report_sections(notification_sections)
 
+        server_chan_enabled = (
+            self.server_chan or self.config.system.server_chan_enabled
+        )
         should_send_server_chan = (
             bool(targets)
-            and set(targets) == set(enabled_targets)
-            and self.config.system.server_chan_enabled
+            and server_chan_enabled
             and bool(self.config.system.server_chan_key)
+            and (
+                self.server_chan
+                or set(targets) == set(enabled_targets)
+            )
         )
         if should_send_server_chan:
             push_wechat(self.config.system.server_chan_key)
         elif (
             targets
-            and self.config.system.server_chan_enabled
+            and server_chan_enabled
             and self.config.system.server_chan_key
         ):
             mlog.info("本次不是全部运行，跳过 Server 酱通知")
+        elif self.server_chan and not self.config.system.server_chan_key:
+            mlog.warning("已请求 Server 酱推送，但未配置 server_chan_key")
         if targets and self.config.system.completion_action != "none":
             if not all_succeeded:
                 mlog.warning("存在失败或超时任务，仍执行强制系统完成动作")
@@ -204,7 +218,15 @@ class AutomationRunner:
         return f"{minutes} 分 {remaining_seconds} 秒"
 
 
-async def run_automation(config: Config, force: bool = False) -> bool:
+async def run_automation(
+    config: Config,
+    force: bool = False,
+    server_chan: bool = False,
+) -> bool:
     """创建并运行一次自动化会话。"""
 
-    return await AutomationRunner(config, force=force).run()
+    return await AutomationRunner(
+        config,
+        force=force,
+        server_chan=server_chan,
+    ).run()

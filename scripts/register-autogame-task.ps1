@@ -9,14 +9,14 @@ $ProjectDir = (Resolve-Path $ProjectDir).Path
 $uv = (Get-Command uv -ErrorAction Stop).Source
 $action = New-ScheduledTaskAction `
     -Execute $uv `
-    -Argument "run python main.py --automation" `
+    -Argument "run python main.py -a -f -s" `
     -WorkingDirectory $ProjectDir
 
 $existing = Get-ScheduledTask -TaskName $TaskName -TaskPath '\' -ErrorAction SilentlyContinue
 if ($null -ne $existing) {
     # 已存在任务时只更新执行动作，保留电脑上的触发器、账户和其他设置。
     Set-ScheduledTask -TaskName $TaskName -TaskPath '\' -Action $action | Out-Null
-    Write-Output ("已更新 {0} 的执行入口：python main.py --automation；其他计划任务配置保持不变。" -f $TaskName)
+    Write-Output ("已更新 {0} 的执行入口：python main.py -a -f -s；其他计划任务配置保持不变。" -f $TaskName)
     exit 0
 }
 
@@ -47,4 +47,4 @@ $task = New-ScheduledTask `
 $xml = $task | Export-ScheduledTask
 $xml = $xml -replace '<MultipleInstancesPolicy>[^<]+</MultipleInstancesPolicy>', '<MultipleInstancesPolicy>StopExisting</MultipleInstancesPolicy>'
 Register-ScheduledTask -TaskName $TaskName -TaskPath '\' -Xml $xml -Force | Out-Null
-Write-Output ("已创建 {0}：07:00 和 19:00 执行 python main.py --automation。" -f $TaskName)
+Write-Output ("已创建 {0}：07:00 和 19:00 执行 python main.py -a -f -s。" -f $TaskName)

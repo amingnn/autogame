@@ -316,6 +316,45 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
 
             push_wechat.assert_called_once_with("secret-value")
 
+    async def test_server_chan_flag_overrides_config_and_partial_run_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(
+                paths=AppPaths(root=Path(directory)),
+                system=SystemConfig(
+                    completion_action="none",
+                    server_chan_enabled=False,
+                    server_chan_key="secret-value",
+                ),
+                tasks={
+                    "demo": TaskConfig(enabled=True),
+                    "cooldown": TaskConfig(enabled=True),
+                },
+            )
+            runner = AutomationRunner(config, server_chan=True)
+            definition = TaskDefinition(
+                "demo",
+                lambda _config: ImmediateTask(),
+                "立即完成",
+                False,
+            )
+
+            with (
+                patch.object(
+                    runner.manager,
+                    "should_run",
+                    side_effect=lambda name: name == "demo",
+                ),
+                patch(
+                    "autogame.task_manager.get_task_definition",
+                    return_value=definition,
+                ),
+                patch("autogame.automation.runner.push_wechat") as push_wechat,
+                patch("autogame.automation.runner.report_sections"),
+            ):
+                self.assertTrue(await runner.run())
+
+            push_wechat.assert_called_once_with("secret-value")
+
     async def test_successful_tasks_execute_action_and_report_details(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = Config(
