@@ -1,7 +1,7 @@
 ﻿param(
     [string]$TaskName = "AutoGame",
     [string]$ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
-    [string]$TimesCsv = "07:00,19:00",
+    [string]$TimesCsv = "",
     [string]$UvPath = "",
     [switch]$List
 )
@@ -29,15 +29,24 @@ $uv = if ($UvPath -and (Test-Path $UvPath)) {
     (Get-Command uv -ErrorAction Stop).Source
 }
 
-$times = @($TimesCsv -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-if ($times.Count -eq 0 -or @($times | Where-Object { $_ -notmatch '^(?:[01]\d|2[0-3]):[0-5]\d$' }).Count -gt 0) {
-    throw "TimesCsv must contain one or more valid HH:mm values."
+if ($existing -and [string]::IsNullOrWhiteSpace($TimesCsv)) {
+    # 未从图形界面传入时间时，保留现有任务的全部触发器。
+    $triggers = @($existing.Triggers)
+    $times = @($triggers | ForEach-Object {
+        if ($_.StartBoundary) { ([datetime]$_.StartBoundary).ToString("HH:mm") }
+    } | Where-Object { $_ } | Sort-Object -Unique)
+} else {
+    if ([string]::IsNullOrWhiteSpace($TimesCsv)) { $TimesCsv = "07:00,19:00" }
+    $times = @($TimesCsv -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    if ($times.Count -eq 0 -or @($times | Where-Object { $_ -notmatch '^(?:[01]\d|2[0-3]):[0-5]\d$' }).Count -gt 0) {
+        throw "TimesCsv must contain one or more valid HH:mm values."
+    }
+    $times = @($times | Sort-Object -Unique)
+    $triggers = @($times | ForEach-Object {
+        $hour, $minute = $_ -split ':'
+        New-ScheduledTaskTrigger -Daily -At (Get-Date -Hour ([int]$hour) -Minute ([int]$minute) -Second 0)
+    })
 }
-$times = @($times | Sort-Object -Unique)
-$triggers = @($times | ForEach-Object {
-    $hour, $minute = $_ -split ':'
-    New-ScheduledTaskTrigger -Daily -At (Get-Date -Hour ([int]$hour) -Minute ([int]$minute) -Second 0)
-})
 
 $action = New-ScheduledTaskAction `
     -Execute $uv `
