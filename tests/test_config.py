@@ -96,6 +96,23 @@ class ConfigTests(unittest.TestCase):
 
             self.assertFalse(Config.load(path).system.server_chan_enabled)
 
+    def test_skyland_account_patch_keeps_existing_password_when_blank(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.yaml"
+            path.write_text(
+                "tasks:\n  skyland_sign:\n    account:\n"
+                "      phone: '13800000000'\n      password: existing-secret\n",
+                encoding="utf-8",
+            )
+            ConfigStore(path).update_task(
+                "skyland_sign", {"account": {"phone": "13900000000"}}
+            )
+            account = Config.load(path).tasks["skyland_sign"].account
+            self.assertIsNotNone(account)
+            assert account is not None
+            self.assertEqual(account.phone, "13900000000")
+            self.assertEqual(account.password.get_secret_value(), "existing-secret")
+
     def test_cleanup_keeps_recent_logs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             log_dir = Path(directory)

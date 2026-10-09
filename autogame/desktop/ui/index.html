@@ -104,6 +104,11 @@
             <label class="check-field"><input id="systemServerChanEnabled" type="checkbox"> <span>发送 Server 酱通知</span><span class="field-help" tabindex="0" title="仅在全部运行时生效" aria-label="仅在全部运行时生效">?</span></label>
             <div class="detail-field full-field"><label>Server 酱 Key</label><div class="secret-input-wrap"><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="未配置"><button class="field-icon-button" id="toggleServerKey" type="button" title="显示 Server 酱 Key" aria-label="显示 Server 酱 Key"></button></div></div>
           </div>
+          <div class="settings-form schedule-form">
+            <div class="full-field"><h3>定时自动化运行</h3><p>保存后会在 Windows 任务计划程序中创建每日任务，AutoGame 不必保持开启。</p></div>
+            <div id="scheduleTimes" class="schedule-times full-field"></div>
+            <div class="schedule-actions full-field"><button class="secondary-button" id="addScheduleTime" type="button">添加时间</button><button class="secondary-button" id="saveScheduleTimes" type="button">保存定时任务</button></div>
+          </div>
           <div class="info-card">
             <p>任务和全局配置保存后会写入根目录 <code>config.yaml</code>，程序会校验、备份并重新加载。</p>
           </div>

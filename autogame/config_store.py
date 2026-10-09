@@ -60,7 +60,7 @@ class ConfigStore:
     ) -> Config:
         """校验并原子更新指定任务配置。"""
 
-        allowed = {"enabled", "interval_hours", "script_path"}
+        allowed = {"enabled", "interval_hours", "script_path", "account"}
         unknown = set(patch) - allowed
         if unknown:
             raise ValueError(f"不允许修改的配置字段：{sorted(unknown)}")
@@ -79,6 +79,12 @@ class ConfigStore:
                 current = {}
                 tasks[task_name] = current
             merged = _to_plain(copy.deepcopy(current))
+            if "account" in patch and isinstance(patch["account"], Mapping):
+                current_account = merged.get("account", {})
+                account_update = _to_plain(patch["account"])
+                if isinstance(current_account, Mapping):
+                    merged["account"] = {**_to_plain(current_account), **account_update}
+                    patch = {**patch, "account": merged["account"]}
             merged.update(patch)
             TaskConfig.model_validate(merged)
             for key, value in patch.items():

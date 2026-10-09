@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from autogame.automation.scheduler import get_scheduled_times, set_scheduled_times
+
 if TYPE_CHECKING:
     from autogame.desktop.app import DesktopBackend
 
@@ -70,6 +72,27 @@ class DesktopBridge:
         """返回当前任务和系统状态。"""
 
         return self._execute(self._backend.manager.get_status_snapshot)
+
+    def get_scheduled_times(self) -> dict[str, object]:
+        """读取现有 AutoGame Windows 计划任务的触发时间。"""
+
+        try:
+            return {"ok": True, "data": get_scheduled_times()}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def update_scheduled_times(self, times: list[str]) -> dict[str, object]:
+        """把页面提交的每日时间列表交给项目 PowerShell 模板。"""
+
+        try:
+            saved = set_scheduled_times(list(times or []))
+            return {
+                "ok": True,
+                "data": saved,
+                "message": f"已写入每日定时任务：{', '.join(saved)}",
+            }
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
 
     def get_server_chan_key(self) -> dict[str, object]:
         """仅在用户主动查看时返回已保存的 Server 酱 Key。"""

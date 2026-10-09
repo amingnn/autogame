@@ -197,6 +197,12 @@ function renderScriptForm(task) {
   return `<div class="detail-field"><label>脚本 exe 路径</label><input id="scriptPath" value="${escapeHtml(task.script_path)}" placeholder="选择脚本 exe 文件"></div>`;
 }
 
+function renderSkylandAccountForm(task) {
+  if (task.name !== "skyland_sign") return "";
+  return `<div class="detail-field"><label>森空岛手机号</label><input id="skylandPhone" inputmode="tel" value="${escapeHtml(task.account_phone || "")}" placeholder="用于 Token 失效后重新登录"></div>
+    <div class="detail-field"><label>森空岛密码</label><input id="skylandPassword" type="password" autocomplete="new-password" placeholder="${task.account_password_configured ? "已配置，留空保持原值" : "用于 Token 失效后重新登录"}"></div>`;
+}
+
 function renderTaskDetails() {
   const task = (currentState?.tasks || []).find((item) => item.name === currentTaskName);
   const title = document.getElementById("detailTitle");
@@ -226,11 +232,12 @@ function renderTaskDetails() {
     </div>
     <div class="overview-hint"><span class="status-dot"></span> 右侧日志显示当前会话的实时输出</div>
     <details class="config-section">
-      <summary><span>任务配置</span><span class="config-summary">启用状态、执行间隔${task.requires_script ? "、脚本路径" : ""}</span></summary>
+      <summary><span>任务配置</span><span class="config-summary">启用状态、执行间隔${task.requires_script ? "、脚本路径" : task.name === "skyland_sign" ? "、失效后重新登录" : ""}</span></summary>
       <div class="config-section-body">
         <div class="detail-field"><label>是否启用</label><select id="taskEnabled"><option value="true" ${task.enabled ? "selected" : ""}>启用</option><option value="false" ${!task.enabled ? "selected" : ""}>禁用</option></select></div>
         <div class="detail-field"><label>间隔时间（小时）</label><input id="taskInterval" type="number" min="0" step="0.1" value="${task.interval_hours}"></div>
         ${renderScriptForm(task)}
+        ${renderSkylandAccountForm(task)}
         <div class="detail-save-row"><button class="primary-button" id="detailSave">保存配置</button></div>
       </div>
     </details>
@@ -406,6 +413,12 @@ async function saveTask() {
     config_revision: currentState.config_revision,
   };
   if (task.requires_script) patch.script_path = document.getElementById("scriptPath").value.trim();
+  if (task.name === "skyland_sign") {
+    const account = { phone: document.getElementById("skylandPhone").value.trim() };
+    const password = document.getElementById("skylandPassword").value;
+    if (password) account.password = password;
+    patch.account = account;
+  }
   try {
     await callDesktop("update_task_config", task.name, patch);
     showToast("任务配置已保存并重新加载");
@@ -436,6 +449,42 @@ async function saveSystemConfig() {
     settingsDirty = false;
     setSettingsOpen(false);
     await refreshStatus();
+  } catch (error) { showToast(error.message, true); }
+}
+
+function addScheduleTimeRow(value = "08:00") {
+  const row = document.createElement("div");
+  row.className = "schedule-time-row";
+  row.innerHTML = `<input type="time" value="${escapeHtml(value)}" aria-label="每日运行时间"><button class="icon-button" type="button" aria-label="删除时间">×</button>`;
+  row.querySelector("button").onclick = () => row.remove();
+  document.getElementById("scheduleTimes").append(row);
+}
+
+async function loadScheduleTimes() {
+  const container = document.getElementById("scheduleTimes");
+  container.replaceChildren();
+  if (previewMode) {
+    addScheduleTimeRow("08:00");
+    return;
+  }
+  try {
+    const result = await callDesktop("get_scheduled_times");
+    (result.data || []).forEach(addScheduleTimeRow);
+  } catch (error) {
+    showToast(error.message, true);
+  }
+}
+
+async function saveScheduleTimes() {
+  if (previewMode) {
+    showToast("预览模式不会写入 Windows 定时任务");
+    return;
+  }
+  const times = [...document.querySelectorAll("#scheduleTimes input[type='time']")].map((input) => input.value);
+  try {
+    const result = await callDesktop("update_scheduled_times", times);
+    showToast(result.message || "定时任务已更新");
+    await loadScheduleTimes();
   } catch (error) { showToast(error.message, true); }
 }
 
@@ -502,6 +551,7 @@ function setSettingsOpen(open) {
   }
   section.classList.toggle("hidden", !open);
   section.setAttribute("aria-hidden", String(!open));
+  if (open) void loadScheduleTimes();
 }
 
 async function toggleServerKeyVisibility() {
@@ -643,6 +693,8 @@ document.getElementById("reloadButton").onclick = reloadConfig;
 document.getElementById("clearLogsButton").onclick = clearLogs;
 document.getElementById("openLogsFolderButton").onclick = openLogsFolder;
 document.getElementById("settingsButton").onclick = () => setSettingsOpen(true);
+document.getElementById("addScheduleTime").onclick = () => addScheduleTimeRow();
+document.getElementById("saveScheduleTimes").onclick = saveScheduleTimes;
 document.getElementById("closeSettingsButton").onclick = () => setSettingsOpen(false);
 document.getElementById("cancelSettingsButton").onclick = () => setSettingsOpen(false);
 document.getElementById("saveSystemConfigButton").onclick = saveSystemConfig;

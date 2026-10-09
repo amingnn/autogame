@@ -274,6 +274,36 @@ class SkylandSignTests(unittest.TestCase):
             ],
         )
 
+    def test_401_during_signing_reauthenticates_and_retries(self) -> None:
+        account = SkylandAccountConfig(phone="13800000000", password="dummy-password")
+        refreshed_client = Mock()
+        refreshed_client.passport_token = "fresh-token"
+        refreshed_client.sign_all.return_value = ["重新登录后签到成功"]
+        with tempfile.TemporaryDirectory() as directory:
+            token_path = Path(directory) / "token.txt"
+            token_path.write_text("cached-token\n", encoding="utf-8")
+            with patch("autogame.tasks.skyland_sign.service.SkylandClient") as client:
+                client.return_value.sign_all.side_effect = SkylandAuthenticationError(
+                    "签到接口返回 HTTP 401"
+                )
+                client.from_password.return_value = refreshed_client
+                result = run_sign_in(TokenStore(token_path), account)
+            self.assertEqual(token_path.read_text(encoding="utf-8"), "fresh-token\n")
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.messages, ("重新登录后签到成功",))
+        client.from_password.assert_called_once_with("13800000000", "dummy-password")
+        self._print_business_result(
+            "森空岛签到期间 HTTP 401 恢复结果",
+            [
+                "缓存 Token 初始化：成功",
+                "签到请求：HTTP 401",
+                "处理方式：手机号密码重新登录并重试签到",
+                f"签到结果：{result.messages[0]}",
+                "缓存更新：已写入新 Token",
+            ],
+        )
+
     def test_missing_cached_token_logs_in_and_saves_token(self) -> None:
         account = SkylandAccountConfig(phone="13800000000", password="dummy-password")
         refreshed_client = Mock()

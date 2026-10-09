@@ -94,6 +94,11 @@ class TaskManager:
                     "next_eligible_at": next_eligible_at,
                 }
             )
+            if name == "skyland_sign" and task_config.account is not None:
+                item["account_phone"] = task_config.account.phone
+                item["account_password_configured"] = bool(
+                    task_config.account.password.get_secret_value()
+                )
             tasks.append(item)
 
         total = len(enabled_names)
