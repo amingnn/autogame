@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from autogame.config import Config
-from autogame.tasks.base import TaskAdapter
+from autogame.tasks.core.base import TaskAdapter
 from autogame.tasks.maa import MaaAdapter
 from autogame.tasks.maaend import MaaEndAdapter
 from autogame.tasks.skyland_sign import SkylandSignAdapter

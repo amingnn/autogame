@@ -13,7 +13,7 @@ from autogame.models import TaskRuntime, TaskState, format_datetime
 from autogame.registry import get_task_definition
 from autogame.runtime.execution_lock import ExecutionLease, ExecutionLock
 from autogame.runtime.state_store import StateStore
-from autogame.tasks.base import AdapterResult, TaskAdapter, TaskContext
+from autogame.tasks.core.base import AdapterResult, TaskAdapter, TaskContext
 
 
 TERMINAL_STATES: set[TaskState] = {
@@ -335,6 +335,12 @@ class TaskManager:
                     success=False,
                     final_state="timed_out",
                     error="自动化会话超过全局超时时间",
+                )
+            elif self.get_task_state(task_name) not in TERMINAL_STATES:
+                self._set_runtime_state(
+                    task_name,
+                    "timed_out",
+                    error="自动化会话超时，任务未能启动",
                 )
 
     async def stop_task(self, task_name: str, reason: str = "任务由用户停止") -> bool:

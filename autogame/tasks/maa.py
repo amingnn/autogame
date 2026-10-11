@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from autogame.tasks.process_script import (
+from autogame.tasks.core.process_script import (
     LogObservation,
     ProcessScriptAdapter,
     ProcessScriptSpec,
@@ -31,6 +31,8 @@ class MaaAdapter(ProcessScriptAdapter):
             )
         )
         self._previous_message: str | None = None
+        self._successful_task_count = 0
+        self._failed_task_count = 0
 
     def observe_logs(self, records: list[tuple[Path, str]]) -> LogObservation:
         """清洗并筛选任务结果和专精等级信息。"""
@@ -44,11 +46,13 @@ class MaaAdapter(ProcessScriptAdapter):
                 completed = True
                 messages.append(TaskLogLine(key, "任务已全部完成"))
             elif "任务出错" in message:
+                self._failed_task_count += 1
                 detail = self._extract_detail(message, "任务出错")
                 messages.append(TaskLogLine(key, f"[ERR] 任务出错: {detail}"))
             elif "任务跳过" in message:
                 messages.append(TaskLogLine(key, f"[SKIP] {message}"))
             elif "完成任务" in message:
+                self._successful_task_count += 1
                 messages.append(TaskLogLine(key, message))
             elif "专精等级" in message:
                 mastery = message
@@ -57,9 +61,14 @@ class MaaAdapter(ProcessScriptAdapter):
                 messages.append(TaskLogLine(key, mastery))
             self._previous_message = message
 
+        failure_message = None
+        if completed and self._failed_task_count and not self._successful_task_count:
+            failure_message = "整轮任务失败：所有实际执行任务均报错"
+
         return LogObservation(
             activity_seen=bool(messages),
             completion_seen=completed,
+            failure_message=failure_message,
             messages=tuple(messages),
         )
 

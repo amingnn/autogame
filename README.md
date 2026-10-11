@@ -61,28 +61,33 @@ tasks:
     script_path: "D:\\game\\MaaEnd-win-x86_64-v2.18.0\\MaaEnd.exe"
 ```
 
-MAA 和 MaaEnd 只需配置脚本 exe。两者都只启动、监控和重启配置的脚本进程，不负责启动游戏；MAA 读取 `debug/gui.log`，MaaEnd 读取 `debug/maafw*.log` 和 `debug/go-service.log`。当前版本对应的 MAA 配置也单独放在 `examples/maa-config.example.yaml` 中。
+MAA 和 MaaEnd 只需配置脚本 exe。两者都只启动、监控和重启配置的脚本进程，不负责启动游戏；MAA 读取 `debug/gui.log`，MaaEnd 读取任务列表日志和当前的 `debug/maafw.log`（部分版本位于 `debug/cpp-algo/debug/maafw.log`），不会把轮转备份日志重复读入本次任务。当前版本对应的 MAA 配置也单独放在 `examples/maa-config.example.yaml` 中。
+
+自动化模式启动后会先等待 60 秒，再扫描并启动任务；这段时间内关闭 AutoGame 进程即可取消本次执行。
 
 自动化策略示例：
 
 ```yaml
 system:
   automation_timeout_minutes: 30
+  task_execution_mode: "parallel" # parallel 并行 / sequential 串行（节省内存）
   completion_action: "hibernate"
   completion_action_delay_seconds: 60
+  mute_during_automation: true
   server_chan_enabled: true
 ```
 
 `completion_action: "none"` 表示完成后不执行系统动作。
 `server_chan_enabled: false` 表示不发送 Server 酱通知。
+`mute_during_automation: true` 表示自动化运行期间静音系统音量，任务全部完成或全局超时后恢复原状态。
 
 ## 任务流程
 
 - `skyland_sign`：在项目进程内调用森空岛接口；
 - `maa`：启动配置的 MAA，只读取 `debug/gui.log` 中的任务和专精信息；游戏由外部方式启动；
-- `maaend`：启动配置的 MaaEnd，监听 `debug/maafw*.log` 和 `debug/go-service.log`；终末地由外部方式启动。
+- `maaend`：启动配置的 MaaEnd，监听任务列表日志和当前 `debug/maafw.log`；终末地由外部方式启动。
 
-外部脚本已有同路径旧实例时会先安全关闭再重新启动。MAA 读取到“任务已全部完成”后完成；“任务出错”只作为 `【ERR】` 业务日志展示。MaaEnd 以“结束进程”任务为完成标志，并保留十分钟有效业务日志静默兜底。不再使用 Webhook。
+MAA 和 MaaEnd 外部脚本已有同路径旧实例时都会先安全关闭再重新启动，没有实例时直接启动配置的 exe。如果启动器在初始化时替换 PID，监控器会按同一个 exe 路径继续跟踪。MAA 读取到“任务已全部完成”后完成；“任务出错”只作为 `【ERR】` 业务日志展示。MaaEnd 依赖启动时自动运行，以前段业务任务全部进入终态为主完成依据；手动停止不再单独判定，日志连续 5 分钟没有有效业务内容时按静默规则结束。不再使用 Webhook。
 
 任务状态：
 

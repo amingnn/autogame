@@ -12,11 +12,12 @@ from autogame.logger import get_task_logger
 from autogame.runtime.log_reader import IncrementalLogReader
 from autogame.runtime.process import (
     ProcessHandle,
+    describe_process_handle,
     process_is_running,
     start_process_async,
     stop_process_tree,
 )
-from autogame.tasks.base import AdapterResult, StartResult, TaskContext
+from autogame.tasks.core.base import AdapterResult, StartResult, TaskContext
 
 
 CompletionMode = Literal["log_marker", "process_exit"]
@@ -29,6 +30,9 @@ class ProcessScriptSpec:
     process_name: str
     log_patterns: tuple[str, ...]
     completion_mode: CompletionMode
+    restart_existing: bool = True
+    allow_existing: bool = False
+    launch_via_shell: bool = False
     startup_timeout_seconds: float = 15.0
     inactivity_completion_seconds: float | None = None
     timeout_seconds: float = 4 * 60 * 60
@@ -56,6 +60,7 @@ class ProcessRun:
     failure_message: str | None = None
     last_meaningful_activity_at: float | None = None
     logged_lines: set[str] = field(default_factory=set)
+    startup_grace_logged: bool = False
 
 
 @dataclass(frozen=True)
@@ -89,6 +94,13 @@ class ProcessScriptAdapter:
             return StartResult(None, AdapterResult("failed", f"脚本路径不存在：{script_path}"))
 
         try:
+            task_log.debug(
+                "准备启动脚本：path={}，process={}，restart_existing={}，launch_via_shell={}",
+                script_path,
+                self.spec.process_name,
+                self.spec.restart_existing,
+                self.spec.launch_via_shell,
+            )
             log_reader = IncrementalLogReader(
                 script_path.parent / "debug" / pattern
                 for pattern in self.spec.log_patterns
@@ -99,13 +111,16 @@ class ProcessScriptAdapter:
                 script_path,
                 self.spec.process_name,
                 self.spec.startup_timeout_seconds,
-                allow_existing=False,
-                restart_existing=True,
+                allow_existing=self.spec.allow_existing,
+                restart_existing=self.spec.restart_existing,
+                launch_via_shell=self.spec.launch_via_shell,
             )
         except Exception as exc:
+            task_log.exception("脚本启动异常：{}", self.spec.process_name)
             return StartResult(None, AdapterResult("failed", str(exc)))
 
         action = "已重启" if script_process.restarted else "已启动"
+        task_log.debug("脚本启动诊断：{}", describe_process_handle(script_process))
         task_log.info(
             "脚本进程 {}（PID {}）{}，开始监听任务日志",
             self.spec.process_name,
@@ -170,25 +185,50 @@ class ProcessScriptAdapter:
         if not process_is_running(handle.script_process):
             if handle.completion_started:
                 reason = "完成依据：结束进程任务启动后脚本退出"
+                task_log.info("{}", reason)
                 return AdapterResult(
                     "completed",
                     reason,
                     report_lines=(*report_lines, reason),
                 )
+
+            # MaaEnd 启动时可能先退出启动器，再由同目录的新进程接管。
+            # 给进程替换和首批日志一个短暂窗口，避免把正常启动误判为失败。
+            startup_elapsed = now - handle.started_at_monotonic
+            if startup_elapsed < self.spec.startup_timeout_seconds:
+                if not handle.startup_grace_logged:
+                    task_log.info(
+                        "脚本启动进程正在切换，继续等待首批业务日志（最多 {} 秒）",
+                        int(self.spec.startup_timeout_seconds),
+                    )
+                    handle.startup_grace_logged = True
+                return AdapterResult(
+                    "running",
+                    waiting_for_completion=True,
+                    report_lines=tuple(report_lines),
+                )
+            task_log.warning(
+                "脚本进程已退出，未检测到完成标志；退出诊断：{}",
+                describe_process_handle(handle.script_process),
+            )
             return self._on_process_exit(handle, report_lines)
 
         inactivity_seconds = self.spec.inactivity_completion_seconds
+        inactivity_started_at = (
+            handle.last_meaningful_activity_at
+            if handle.last_meaningful_activity_at is not None
+            else handle.started_at_monotonic
+        )
         if (
             inactivity_seconds is not None
-            and handle.last_meaningful_activity_at is not None
-            and now - handle.last_meaningful_activity_at >= inactivity_seconds
+            and now - inactivity_started_at >= inactivity_seconds
         ):
-            minutes = inactivity_seconds / 60
-            reason = f"完成依据：连续 {minutes:g} 分钟无有效业务日志"
-            task_log.warning("{}，按静默规则认定完成", reason)
+            state, reason = self._inactivity_outcome(inactivity_seconds)
+            action = "完成" if state == "completed" else "失败"
+            task_log.warning("{}，按静默规则认定{}", reason, action)
             await asyncio.to_thread(stop_process_tree, handle.script_process)
             return AdapterResult(
-                "completed",
+                state,
                 reason,
                 report_lines=(*report_lines, reason),
             )
@@ -206,6 +246,15 @@ class ProcessScriptAdapter:
             waiting_for_completion=True,
             report_lines=tuple(report_lines),
         )
+
+    def _inactivity_outcome(
+        self,
+        inactivity_seconds: float,
+    ) -> tuple[Literal["completed", "failed"], str]:
+        """返回日志静默后的结果；具体任务可将静默视为失败。"""
+
+        minutes = inactivity_seconds / 60
+        return "completed", f"完成依据：连续 {minutes:g} 分钟无有效业务日志"
 
     async def stop(self, context: TaskContext, handle: object) -> None:
         """超时或服务退出时停止本次启动的脚本进程。"""

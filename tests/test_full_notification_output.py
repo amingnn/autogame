@@ -31,24 +31,29 @@ SKYLAND_SIGN_REPEATED = (
     ),
 )
 
-# MAA 最近一轮 gui.log 原始片段定义在单任务输出测试中。
-from test_maa_output import MAA_RAW_LOG as MAA_RECENT_LOG
+# 摘自 2026-08-17 最近一轮 MAA gui.log 的业务输出。
+MAA_RECENT_LOG = """[2026-08-17 19:44:25.429][INF][TaskQueueViewModel]     <2> 更新数据: 更新数据 任务跳过
+[2026-08-17 19:44:27.436][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-08-17 19:44:29.443][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-08-17 19:52:26.352][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-08-17 19:52:44.371][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-08-17 19:53:36.427][INF][TaskQueueViewModel]     <2> 完成任务: 剿灭
+[2026-08-17 20:02:05.017][INF][TaskQueueViewModel]     <2> 任务已全部完成！"""
 
-# 摘自最新一轮含业务事件的 MaaEnd 框架日志：
-# maafw.bak.2026.08.14-19.53.06.792.log
-MAAEND_RECENT_LOG = """[2026-08-14 19:17:24.543][INF][Px36196][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Starting] [details={"entry":"EnvironmentMonitoringMain","hash":"dc281c00a9d17e86","task_id":200000009,"uuid":"00000000007E0F1A"}]
-[2026-08-14 19:21:43.820][INF][Px36196][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Succeeded] [details={"entry":"EnvironmentMonitoringMain","hash":"dc281c00a9d17e86","task_id":200000009,"uuid":"00000000007E0F1A"}]
-[2026-08-14 19:21:43.821][INF][Px36196][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Starting] [details={"entry":"DailyRewardStart","hash":"dc281c00a9d17e86","task_id":200000010,"uuid":"00000000007E0F1A"}]
-[2026-08-14 19:23:34.175][INF][Px36196][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Succeeded] [details={"entry":"DailyRewardStart","hash":"dc281c00a9d17e86","task_id":200000010,"uuid":"00000000007E0F1A"}]
-[2026-08-14 19:23:34.176][INF][Px36196][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Starting] [details={"entry":"AutoCollectSchedule","hash":"dc281c00a9d17e86","task_id":200000011,"uuid":"00000000007E0F1A"}]
-[2026-08-14 19:53:04.913][INF][Px36196][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Failed] [details={"entry":"AutoCollectSchedule","hash":"dc281c00a9d17e86","task_id":200000011,"uuid":"00000000007E0F1A"}]"""
+# 摘自 2026-08-17 19:44—19:45 项目实际记录的 MaaEnd 事件；追加前段提交记录和后续
+# Succeeded 事件用于回归验证：前一个子任务失败后仍必须继续监听成功任务。
+MAAEND_RECENT_LOG = """[2026-08-17 19:44:35.500][INF][Task] 实例 自动化: 前段任务已提交, task_ids: [200000021,200000022]
+[2026-08-17 19:44:35.513][INF][Px31536][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Starting] [details={"entry":"VisitFriendsMain","hash":"dc281c00a9d17e86","task_id":200000021,"uuid":"00000000007E0F1A"}]
+[2026-08-17 19:45:39.847][INF][Px31536][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Failed] [details={"entry":"VisitFriendsMain","hash":"dc281c00a9d17e86","task_id":200000021,"uuid":"00000000007E0F1A"}]
+[2026-08-17 19:45:39.853][INF][Px31536][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Starting] [details={"entry":"DijiangRewards","hash":"dc281c00a9d17e86","task_id":200000022,"uuid":"00000000007E0F1A"}]
+[2026-08-17 19:46:12.104][INF][Px31536][Tx2471][Utils/EventDispatcher.hpp][L65][MaaNS::EventDispatcher::notify] !!!OnEventNotify!!! [handle=true] [msg=Tasker.Task.Succeeded] [details={"entry":"DijiangRewards","hash":"dc281c00a9d17e86","task_id":200000022,"uuid":"00000000007E0F1A"}]"""
 
 from autogame.automation.runner import AutomationRunner
 from autogame.config import AppPaths, Config, SystemConfig, TaskConfig
 from autogame.notify import build_push_payload
 from autogame.tasks.maa import MaaAdapter
 from autogame.tasks.maaend import MaaEndAdapter
-from autogame.tasks.process_script import TaskLogLine
+from autogame.tasks.core.process_script import TaskLogLine
 
 
 TIMESTAMP_PATTERN = re.compile(
@@ -65,7 +70,8 @@ class FullNotificationOutputTests(unittest.TestCase):
         maa_lines = self._report_lines(maa_observation.messages)
 
         maaend_records = self._records("maafw.log", MAAEND_RECENT_LOG)
-        maaend_observation = MaaEndAdapter().observe_logs(maaend_records)
+        maaend_adapter = self._maaend_adapter_with_localized_tasks()
+        maaend_observation = maaend_adapter.observe_logs(maaend_records)
         maaend_lines = self._report_lines(maaend_observation.messages)
 
         project_log_lines = [
@@ -94,10 +100,10 @@ class FullNotificationOutputTests(unittest.TestCase):
 
         self.assertTrue(maa_observation.completion_seen)
         self.assertIsNone(maa_observation.failure_message)
-        self.assertEqual(
-            maaend_observation.failure_message,
-            "任务失败: 自动收集计划",
-        )
+        self.assertTrue(maaend_observation.completion_seen)
+        self.assertIsNone(maaend_observation.failure_message)
+        self.assertIn("[ERR] 任务出错: 🤝拜访好友", maaend_lines)
+        self.assertIn("任务完成: 🎁基建任务", maaend_lines)
         self.assertEqual(notification_payload["title"], "自动化任务报告")
         self.assertEqual(len(notification_sections), 4)
         self.assertEqual(notification_payload["desp"].count("```"), 8)
@@ -114,7 +120,7 @@ class FullNotificationOutputTests(unittest.TestCase):
             notification_payload["desp"],
         )
         self.assertIn(
-            "- maaend：失败（用时 51 分 31 秒）",
+            "- maaend：完成（用时 51 分 31 秒，有 1 个 [ERR]）",
             notification_payload["desp"],
         )
         self.assertIn(
@@ -122,7 +128,7 @@ class FullNotificationOutputTests(unittest.TestCase):
             notification_payload["desp"],
         )
         self.assertIn("maa：完成 (10 分 50 秒)", notification_payload["desp"])
-        self.assertIn("maaend：失败 (51 分 31 秒)", notification_payload["desp"])
+        self.assertIn("maaend：完成 (51 分 31 秒)", notification_payload["desp"])
         self.assertIn("总用时：51 分 31 秒", notification_payload["desp"])
         self.assertIn(
             "完成后动作：hibernate，延迟 60 秒",
@@ -174,6 +180,33 @@ class FullNotificationOutputTests(unittest.TestCase):
         return [(Path(file_name), line) for line in raw_log.splitlines()]
 
     @staticmethod
+    def _maaend_adapter_with_localized_tasks() -> MaaEndAdapter:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / "MaaEnd.exe"
+            executable.write_bytes(b"test")
+            (root / "locales" / "interface").mkdir(parents=True)
+            (root / "tasks").mkdir()
+            (root / "locales" / "interface" / "zh_cn.json").write_text(
+                '{"task.VisitFriends.label":"🤝拜访好友",'
+                '"task.DijiangRewards.label":"🎁基建任务"}',
+                encoding="utf-8",
+            )
+            (root / "tasks" / "VisitFriends.json").write_text(
+                '{"task":[{"name":"VisitFriends","entry":"VisitFriendsMain",'
+                '"label":"$task.VisitFriends.label"}]}',
+                encoding="utf-8",
+            )
+            (root / "tasks" / "DijiangRewards.json").write_text(
+                '{"task":[{"name":"DijiangRewards","entry":"DijiangRewards",'
+                '"label":"$task.DijiangRewards.label"}]}',
+                encoding="utf-8",
+            )
+            adapter = MaaEndAdapter()
+            adapter._load_entry_names(executable)
+            return adapter
+
+    @staticmethod
     def _report_lines(messages: tuple[TaskLogLine, ...]) -> list[str]:
         return [item.message for item in messages if item.reportable]
 
@@ -208,6 +241,10 @@ class FullNotificationOutputTests(unittest.TestCase):
             for _, line in records
             if (match := TIMESTAMP_PATTERN.match(line))
         ]
+        if messages:
+            timestamps = timestamps[-len(messages) :]
+        if messages and timestamps:
+            timestamps.extend([timestamps[-1]] * (len(messages) - len(timestamps)))
         return [
             f"{timestamp} | INFO     | {task_name} | {message}"
             for timestamp, message in zip(timestamps, messages, strict=True)
@@ -251,7 +288,7 @@ class FullNotificationOutputTests(unittest.TestCase):
                 },
                 {
                     "name": "maaend",
-                    "state": "failed",
+                    "state": "completed",
                     "elapsed_seconds": 3090.6,
                     "error": maaend_error,
                     "lines": maaend_lines,

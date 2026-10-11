@@ -42,6 +42,7 @@ const previewState = {
     completion_action_delay_seconds: 60,
     automation_timeout_minutes: 40,
     completion_action: "hibernate",
+    mute_during_automation: true,
     server_chan_enabled: false,
     server_chan_key_configured: true,
   },
@@ -274,8 +275,10 @@ function renderSystemConfig() {
   if (settingsDirty && !section.classList.contains("hidden")) return;
   document.getElementById("systemLogLevel").value = system.log_level;
   document.getElementById("systemTimeout").value = system.automation_timeout_minutes;
+  document.getElementById("systemTaskExecutionMode").value = system.task_execution_mode || "parallel";
   document.getElementById("systemCompletionAction").value = system.completion_action;
   document.getElementById("systemDelay").value = system.completion_action_delay_seconds;
+  document.getElementById("systemMuteDuringAutomation").checked = system.mute_during_automation;
   document.getElementById("systemServerChanEnabled").checked = system.server_chan_enabled;
   document.getElementById("systemSendKey").placeholder = system.server_chan_key_configured ? "已配置，留空保持原值" : "未配置";
   resetServerKeyField(system.server_chan_key_configured);
@@ -435,8 +438,10 @@ async function saveSystemConfig() {
   const patch = {
     log_level: document.getElementById("systemLogLevel").value,
     automation_timeout_minutes: Number(document.getElementById("systemTimeout").value),
+    task_execution_mode: document.getElementById("systemTaskExecutionMode").value,
     completion_action: document.getElementById("systemCompletionAction").value,
     completion_action_delay_seconds: Number(document.getElementById("systemDelay").value),
+    mute_during_automation: document.getElementById("systemMuteDuringAutomation").checked,
     server_chan_enabled: document.getElementById("systemServerChanEnabled").checked,
     config_revision: currentState.config_revision,
   };
@@ -598,6 +603,93 @@ async function runWindowAction(method) {
 
 let resizeState = null;
 
+let paneResizeState = null;
+
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
+function paneResizeHost(pane) {
+  return pane === "sidebar" ? document.querySelector(".app-shell") : document.querySelector(".workspace");
+}
+
+function paneResizeBounds(state) {
+  const rect = state.host.getBoundingClientRect();
+  const styles = getComputedStyle(state.host);
+  const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
+  const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+  const contentWidth = rect.width - paddingLeft - paddingRight;
+  if (state.pane === "sidebar") {
+    const minimum = 220;
+    const maximum = Math.max(minimum, rect.width - 8 - 390 - 8 - 270 - 46);
+    return { minimum, maximum };
+  }
+  const minimum = 270;
+  const maximum = Math.max(minimum, contentWidth - 390 - 8);
+  return { minimum, maximum };
+}
+
+function applyPaneResize(state, event) {
+  const rect = state.host.getBoundingClientRect();
+  const styles = getComputedStyle(state.host);
+  const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+  const bounds = paneResizeBounds(state);
+  if (state.pane === "sidebar") {
+    const width = clamp(event.clientX - rect.left, bounds.minimum, bounds.maximum);
+    document.querySelector(".app-shell").style.setProperty("--sidebar-width", `${Math.round(width)}px`);
+    return;
+  }
+  const width = clamp(rect.right - paddingRight - event.clientX, bounds.minimum, bounds.maximum);
+  document.querySelector(".workspace").style.setProperty("--logs-width", `${Math.round(width)}px`);
+}
+
+function beginPaneResize(event) {
+  if (event.button !== 0) return;
+  const pane = event.currentTarget.dataset.paneResizer;
+  const host = paneResizeHost(pane);
+  if (!host) return;
+  event.preventDefault();
+  event.stopPropagation();
+  paneResizeState = { pane, host, pointerId: event.pointerId };
+  document.body.classList.add("is-pane-resizing");
+  window.addEventListener("pointermove", updatePaneResize);
+  window.addEventListener("pointerup", endPaneResize, { once: true });
+  window.addEventListener("pointercancel", endPaneResize, { once: true });
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+}
+
+function updatePaneResize(event) {
+  if (!paneResizeState) return;
+  event.preventDefault();
+  applyPaneResize(paneResizeState, event);
+}
+
+function endPaneResize(event) {
+  if (!paneResizeState) return;
+  event.preventDefault();
+  if (event.type === "pointerup") applyPaneResize(paneResizeState, event);
+  window.removeEventListener("pointermove", updatePaneResize);
+  document.body.classList.remove("is-pane-resizing");
+  paneResizeState = null;
+}
+
+function handlePaneResizeKeydown(event) {
+  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  const pane = event.currentTarget.dataset.paneResizer;
+  const host = paneResizeHost(pane);
+  if (!host) return;
+  const bounds = paneResizeBounds({ pane, host });
+  const property = pane === "sidebar" ? "--sidebar-width" : "--logs-width";
+  const currentElement = pane === "sidebar" ? document.querySelector(".task-sidebar") : document.querySelector(".logs-panel");
+  const current = currentElement?.getBoundingClientRect().width || bounds.minimum;
+  const direction = pane === "logs"
+    ? (event.key === "ArrowLeft" ? 1 : -1)
+    : (event.key === "ArrowRight" ? 1 : -1);
+  const width = clamp(current + direction * 16, bounds.minimum, bounds.maximum);
+  host.style.setProperty(property, `${Math.round(width)}px`);
+  event.preventDefault();
+}
+
 function resizeDimensions(state, event) {
   const deltaX = event.screenX - state.startX;
   const deltaY = event.screenY - state.startY;
@@ -678,6 +770,11 @@ async function endWindowResize(event) {
 
 document.querySelectorAll(".resize-handle").forEach((handle) => {
   handle.addEventListener("pointerdown", beginWindowResize);
+});
+
+document.querySelectorAll(".pane-resizer").forEach((resizer) => {
+  resizer.addEventListener("pointerdown", beginPaneResize);
+  resizer.addEventListener("keydown", handlePaneResizeKeydown);
 });
 
 document.addEventListener("click", (event) => {

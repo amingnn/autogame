@@ -8,11 +8,14 @@ import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from autogame.automation.runner import AutomationRunner
+from autogame.automation.runner import (
+    AUTOMATION_START_DELAY_SECONDS,
+    AutomationRunner,
+)
 from autogame.config import AppPaths, Config, SystemConfig, TaskConfig
 from autogame.registry import TaskDefinition
 from autogame.task_manager import TaskManager
-from autogame.tasks.base import AdapterResult, StartResult, TaskContext
+from autogame.tasks.core.base import AdapterResult, StartResult, TaskContext
 
 
 class ImmediateTask:
@@ -67,6 +70,14 @@ class ReportingTask(ImmediateTask):
 class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
     """验证统一任务状态流转。"""
 
+    def setUp(self) -> None:
+        self.start_delay_patch = patch(
+            "autogame.automation.runner.AUTOMATION_START_DELAY_SECONDS",
+            0,
+        )
+        self.start_delay_patch.start()
+        self.addCleanup(self.start_delay_patch.stop)
+
     def make_config(self, root: Path, enabled: bool = True) -> Config:
         return Config(
             paths=AppPaths(root=root),
@@ -115,6 +126,66 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
             config = self.make_config(Path(directory), enabled=False)
             runner = AutomationRunner(config)
             self.assertTrue(await runner.run())
+
+    async def test_automation_waits_before_starting_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = self.make_config(Path(directory))
+            runner = AutomationRunner(config)
+            definition = TaskDefinition(
+                "demo",
+                lambda _config: ImmediateTask(),
+                "立即完成",
+                False,
+            )
+
+            with (
+                patch(
+                    "autogame.automation.runner.AUTOMATION_START_DELAY_SECONDS",
+                    AUTOMATION_START_DELAY_SECONDS,
+                ),
+                patch(
+                    "autogame.task_manager.get_task_definition",
+                    return_value=definition,
+                ),
+                patch(
+                    "autogame.automation.runner.asyncio.sleep",
+                    new=AsyncMock(),
+                ) as wait,
+            ):
+                self.assertTrue(await runner.run())
+
+            wait.assert_awaited_once_with(AUTOMATION_START_DELAY_SECONDS)
+
+    async def test_cancelling_start_delay_releases_instance_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = self.make_config(Path(directory))
+            runner = AutomationRunner(config)
+            delay_started = asyncio.Event()
+
+            async def wait_for_cancel(_seconds: int) -> None:
+                delay_started.set()
+                await asyncio.Future()
+
+            with (
+                patch(
+                    "autogame.automation.runner.AUTOMATION_START_DELAY_SECONDS",
+                    AUTOMATION_START_DELAY_SECONDS,
+                ),
+                patch(
+                    "autogame.automation.runner.asyncio.sleep",
+                    side_effect=wait_for_cancel,
+                ),
+            ):
+                run_task = asyncio.create_task(runner.run())
+                await asyncio.wait_for(delay_started.wait(), timeout=1)
+                run_task.cancel()
+                with self.assertRaises(asyncio.CancelledError):
+                    await run_task
+
+            lease = runner._instance_lock.acquire("automation-instance")
+            self.assertIsNotNone(lease)
+            if lease is not None:
+                lease.release()
 
     async def test_automation_starts_due_tasks_concurrently(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -227,6 +298,39 @@ class TaskManagerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(await runner.run())
 
             runner._power.execute.assert_awaited_once_with("hibernate", 60)  # type: ignore[attr-defined]
+
+    async def test_runtime_mute_is_restored_after_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(
+                paths=AppPaths(root=Path(directory)),
+                system=SystemConfig(
+                    completion_action="none",
+                    mute_during_automation=True,
+                ),
+                tasks={"long_running": TaskConfig(enabled=True)},
+            )
+            runner = AutomationRunner(config)
+            runner.manager.wait_for_tasks = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            definition = TaskDefinition(
+                "long_running",
+                lambda _config: PolledTask(),
+                "持续运行",
+                False,
+            )
+
+            with (
+                patch(
+                    "autogame.task_manager.get_task_definition",
+                    return_value=definition,
+                ),
+                patch(
+                    "autogame.automation.runner.RuntimeMuteController"
+                ) as mute_type,
+            ):
+                self.assertFalse(await runner.run())
+
+            mute_type.return_value.mute.assert_called_once_with()
+            mute_type.return_value.restore.assert_called_once_with()
 
     async def test_disabled_server_chan_skips_notification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

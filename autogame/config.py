@@ -55,8 +55,10 @@ class SystemConfig(BaseModel):
 
     log_level: str = "INFO"
     automation_timeout_minutes: int = Field(default=90, gt=0, le=10080)
+    task_execution_mode: Literal["parallel", "sequential"] = "parallel"
     completion_action: Literal["shutdown", "sleep", "none", "hibernate"] = "sleep"
     completion_action_delay_seconds: int = Field(default=60, ge=0, le=86400)
+    mute_during_automation: bool = True
     server_chan_enabled: bool = True
     server_chan_key: str = ""
 

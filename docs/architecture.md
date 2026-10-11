@@ -37,15 +37,16 @@ D:\project\autogame
 │   │   ├── execution_lock.py       # 跨进程执行锁
 │   │   └── power.py                # Windows 电源操作
 │   └── tasks/
-│       ├── base.py                 # 任务协议和公共结果模型
-│       ├── process_script.py       # 通用外部脚本任务
-│       ├── maa.py                  # MAA 固定规则
-│       ├── maaend.py               # MaaEnd 固定规则和日志解析
-│       └── skyland_sign/
+│       ├── maa.py                  # MAA 任务
+│       ├── maaend.py               # MaaEnd 任务
+│       ├── core/
+│       │   ├── base.py             # 任务协议和公共结果模型
+│       │   └── process_script.py   # 通用外部脚本任务
+│       └── skyland_sign/            # 森空岛签到任务
 │           ├── adapter.py          # 森空岛生命周期适配
 │           ├── service.py          # 多账号签到业务
-│           ├── client.py           # 森空岛 HTTP 客户端
-│           ├── token_store.py      # Token 读取和保存
+│           ├── client.py            # 森空岛 HTTP 客户端
+│           ├── token_store.py       # Token 读取和保存
 │           └── security_sm.py      # 设备标识签名实现
 ├── data/                           # 本地运行数据，不提交版本库
 │   ├── maa/config/                 # MAA 配置和自定义 copilot 脚本
@@ -123,7 +124,8 @@ uv run python main.py -a
 流程：
 
 ```text
-获取自动化实例锁 -> 创建 TaskManager -> 计算本次到期任务
+获取自动化实例锁 -> 等待 60 秒的可取消启动窗口
+-> 计算本次到期任务
 -> 并发启动任务和监控循环 -> 等待全部进入终态
 -> 超时时停止本次脚本 -> 汇总通知
 -> 有到期任务时按配置强制执行完成动作 -> 退出
@@ -165,7 +167,7 @@ completed -> cooldown -> pending
 
 - `AppPaths`：集中计算配置、日志、数据、状态、锁和 Token 路径；
 - `AppPaths.default()`：返回当前项目根目录对应的路径；
-- `SystemConfig`：日志级别、分钟级自动化超时、Server 酱通知开关和完成动作策略；
+- `SystemConfig`：日志级别、分钟级自动化超时、运行时静音、Server 酱通知开关和完成动作策略；
 - `TaskConfig`：任务启用状态、执行间隔和脚本路径；
 - `Config`：完整用户配置和内部路径集合；
 - `Config.load()`：从 YAML 读取并严格校验配置。
@@ -229,7 +231,7 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 
 ## 6. 任务实现
 
-### 6.1 `autogame/tasks/base.py`
+### 6.1 `autogame/tasks/core/base.py`
 
 - `TaskContext`：保存任务名、用户配置和启动时间；
 - `TaskContext.script_path`：返回用户配置的脚本路径；
@@ -237,13 +239,13 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 - `StartResult`：表示启动结果和后续监控句柄；
 - `TaskAdapter`：规定 `start()`、`poll()`、`stop()` 生命周期。
 
-### 6.2 `autogame/tasks/process_script.py`
+### 6.2 `autogame/tasks/core/process_script.py`
 
 - `ProcessScriptSpec`：定义脚本进程、日志规则、启动超时和完成模式；
-- `TaskLogLine`：保存清洗后的业务日志及是否进入推送；
+- `TaskLogLine`：保存清洗后的业务日志及是否进入推送；任务开始等过程信息可以只写主日志；
 - `ProcessRun`：保存一次外部脚本运行的进程与日志状态；
 - `LogObservation`：保存一次增量日志解析结果；
-- `ProcessScriptAdapter.start()`：建立日志基线并启动脚本；
+- `ProcessScriptAdapter.start()`：建立日志基线并启动脚本；启动器替换 PID 时按同路径 exe 继续跟踪，并保留短暂启动切换窗口；
 - `ProcessScriptAdapter.poll()`：读取新增日志并检查脚本进程；
 - `ProcessScriptAdapter.stop()`：停止本次 AutoGame 启动的脚本进程树；
 - `ProcessScriptAdapter.observe_logs()`：提供可由具体任务覆盖的日志观察入口。
@@ -267,16 +269,16 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 `MaaEndAdapter` 固定以下规则：
 
 - 不启动或管理终末地进程；
-- 启动用户配置的 `MaaEnd.exe`；
-- 读取 `debug/maafw.log`、`debug/maafw*.log` 和 `debug/go-service.log`；
+- 启动用户配置的 `MaaEnd.exe`；已有实例先安全关闭再重新启动，没有实例时直接启动；
+- 读取任务列表日志、当前 `debug/maafw.log` 和轮转备份 `debug/maafw.bak.*.log`；部分版本的框架日志位于 `debug/cpp-algo/debug/`，同样读取当前日志和轮转备份；
 - `observe_logs()` 将任务事件和物资过程转换为中文展示日志；
-- 识别“结束进程”任务的开始和成功事件；
-- 结束进程任务成功，或该任务开始后脚本退出时完成；
-- 已有有效业务日志且连续十分钟无更新时按静默规则完成。
+- 按日志时间整理轮转文件，识别前段业务任务的终态事件；
+- 前段业务任务全部进入终态后完成；`self-stop` 和手动停止不再单独影响任务结果；
+- 不单独解析手动停止；连续 5 分钟没有有效业务日志时判定本轮失败。
 
 ### 6.5 森空岛
 
-- `SkylandSignAdapter`：把内置签到转换为统一任务结果；
+- `SkylandSignAdapter`：把内置签到转换为统一任务结果，并把每条成功、今日已签到或失败的角色结果写入任务日志；
 - `run_sign_in()`：读取全部账号并执行多账号签到；
 - `SignInResult`：保存总体成功状态和通知消息；
 - `SkylandClient`：使用手机号密码或通行证 Token 换取凭据、读取绑定角色并调用签到接口；
@@ -293,26 +295,30 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 
 ### 7.1 `autogame/runtime/process.py`
 
-- `ProcessHandle`：保存 PID、进程名、创建时间、进程归属和是否重启旧实例；
+- `ProcessHandle`：保存 PID、进程名、创建时间、进程归属、是否重启旧实例和实际 exe 路径；
 - `find_processes()`：按名称查找进程，可进一步要求可执行文件路径完全匹配；
-- `process_is_running()`：同时校验 PID、名称和创建时间；
+- `process_is_running()`：同时校验 PID、名称、创建时间和实际 exe 路径；启动器替换 PID 时按同路径接管；
 - `start_process()`：按策略关闭同路径旧实例，启动 exe 或快捷方式并验证目标进程；
+
+### 7.2 `autogame/runtime/volume.py`
+
+- `RuntimeMuteController`：在 Windows 自动化会话开始时保存默认播放设备的静音状态并静音，会话完成、失败、超时或异常退出后恢复原状态；音频接口不可用时只记录警告，不阻止任务执行。
 - `start_process_async()`：在线程池执行进程启动；
 - `stop_process_tree()`：只停止本次 AutoGame 拥有的进程树。
 
-### 7.2 `autogame/runtime/log_reader.py`
+### 7.3 `autogame/runtime/log_reader.py`
 
 - `IncrementalLogReader`：根据文件偏移读取一个或多个日志模式；
 - `prime()`：记录当前文件末尾，避免读取历史任务结果；
 - `read_lines()`：返回基线之后新增的完整日志行。
 
-### 7.3 `autogame/runtime/state_store.py`
+### 7.4 `autogame/runtime/state_store.py`
 
 - `StateStore`：管理 `data/state.json`；
 - `load()`：读取有效任务成功时间；
 - `record_success()`：加锁、合并并原子保存成功时间。
 
-### 7.4 `autogame/runtime/execution_lock.py`
+### 7.5 `autogame/runtime/execution_lock.py`
 
 - `ExecutionLock`：创建具名跨进程文件锁；
 - `ExecutionLock.acquire()`：立即尝试获取锁，冲突时返回 `None`；
@@ -324,7 +330,7 @@ YAML 不能指定任意 Python 模块或函数，用户只能运行代码注册�
 - `automation-instance`：防止两个自动化会话同时运行；
 - `task-{name}`：防止桌面和自动化重复启动同一任务。
 
-### 7.5 `autogame/runtime/power.py`
+### 7.6 `autogame/runtime/power.py`
 
 - `PowerController`：封装 Windows 电源操作；
 - `PowerController.execute()`：异步等待配置延迟并执行关机、睡眠、休眠或不操作。
@@ -387,7 +393,7 @@ logs/notify-YYYY-MM-DD.log
 - `build_push_payload()`：生成 Server 酱实际接收的标题和 Markdown 分块正文；
 - `push_wechat()`：通过 Server 酱发送本次会话报告。
 
-自动化通知的第一个代码块是任务总结，按配置顺序列出本轮执行结果和用时，并把未到期的启用任务标为“冷却中”、禁用任务标为“已关闭”；总用时和完成后动作也位于该代码块末尾。之后每个实际执行的任务各使用一个独立代码块展示业务详情。任务与会话用时统一显示为“分钟 + 秒”。
+自动化通知的第一个代码块是任务总结，按配置顺序列出本轮执行结果和用时，并把任务详情中的 `[ERR]` 数量备注在对应任务后；未到期的启用任务标为“冷却中”、禁用任务标为“已关闭”。总用时和完成后动作也位于该代码块末尾。之后每个实际执行的任务各使用一个独立代码块展示业务详情，过程性的“任务开始”不进入通知。任务与会话用时统一显示为“分钟 + 秒”。
 
 SendKey 不会出现在桌面状态、普通日志或页面响应中。
 
@@ -395,7 +401,7 @@ SendKey 不会出现在桌面状态、普通日志或页面响应中。
 
 ### 外部脚本任务
 
-1. 在 `autogame/tasks/` 新增任务文件；
+1. 在 `autogame/tasks/` 新增任务文件；任务公共实现放在 `autogame/tasks/core/`；复杂任务使用自己的子目录；
 2. 复用 `ProcessScriptAdapter` 并声明固定进程和日志规则；
 3. 在 `registry.py` 注册任务工厂；
 4. 在 `examples/config.example.yaml` 增加用户需要填写的最少字段；

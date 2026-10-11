@@ -81,6 +81,7 @@ class ConfigTests(unittest.TestCase):
         )
 
         self.assertEqual(config.automation_timeout_minutes, 30)
+        self.assertTrue(config.mute_during_automation)
         self.assertTrue(config.server_chan_enabled)
         self.assertFalse(hasattr(config, "shutdown_on_complete"))
 

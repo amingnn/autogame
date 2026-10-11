@@ -88,7 +88,6 @@ class DesktopBackend:
         finally:
             await self.manager.shutdown()
 
-
 def run_desktop_app(config: Config) -> None:
     """启动桌面窗口；关闭窗口后停止后台任务管理器。"""
 

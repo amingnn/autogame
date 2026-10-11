@@ -10,7 +10,11 @@ from autogame.logger import mlog
 from autogame.notify import clear_report, push_wechat, report_sections
 from autogame.runtime.execution_lock import ExecutionLock
 from autogame.runtime.power import PowerController
+from autogame.runtime.volume import RuntimeMuteController
 from autogame.task_manager import TaskManager
+
+
+AUTOMATION_START_DELAY_SECONDS = 60
 
 
 class AutomationRunner:
@@ -37,6 +41,16 @@ class AutomationRunner:
             mlog.warning("另一个 AutoGame 自动化实例正在运行，本次触发已跳过")
             return False
 
+        try:
+            mlog.info(
+                "自动化将在 {} 秒后启动，可在此期间关闭 AutoGame 以取消本次执行",
+                AUTOMATION_START_DELAY_SECONDS,
+            )
+            await asyncio.sleep(AUTOMATION_START_DELAY_SECONDS)
+        except BaseException:
+            lease.release()
+            raise
+
         clear_report()
         started_at = datetime.now(tz=timezone.utc)
         stop_event = asyncio.Event()
@@ -49,37 +63,57 @@ class AutomationRunner:
             if self.force
             else [name for name in enabled_targets if self.manager.should_run(name)]
         )
-        cooldown = [
-            name for name in enabled_targets if name not in targets
-        ]
+        cooldown = [name for name in enabled_targets if name not in targets]
         mlog.info("冷却中任务：{}", self._format_task_names(cooldown))
         mlog.info("待执行任务：{}", self._format_task_names(targets))
         timed_out = False
+        mute_controller = RuntimeMuteController()
         try:
-            await asyncio.gather(
-                *(
-                    self.manager.run_task(task_name, force=self.force)
-                    for task_name in targets
-                )
-            )
-
+            if targets and self.config.system.mute_during_automation:
+                mute_controller.mute()
             timeout_seconds = self.config.system.automation_timeout_minutes * 60
             startup_elapsed = (
                 datetime.now(tz=timezone.utc) - started_at
             ).total_seconds()
             remaining_seconds = max(0.0, timeout_seconds - startup_elapsed)
-            completed = await self.manager.wait_for_tasks(
-                set(targets),
-                remaining_seconds,
-            )
+            if self.config.system.task_execution_mode == "sequential":
+                completed = True
+                for index, task_name in enumerate(targets):
+                    await self.manager.run_task(task_name, force=self.force)
+                    remaining_seconds = max(
+                        0.0,
+                        timeout_seconds
+                        - (datetime.now(tz=timezone.utc) - started_at).total_seconds(),
+                    )
+                    completed = await self.manager.wait_for_tasks(
+                        {task_name}, remaining_seconds
+                    )
+                    if not completed:
+                        timed_out = True
+                        await self.manager.timeout_tasks(set(targets[index:]))
+                        break
+            else:
+                await asyncio.gather(
+                    *(
+                        self.manager.run_task(task_name, force=self.force)
+                        for task_name in targets
+                    )
+                )
+                completed = await self.manager.wait_for_tasks(
+                    set(targets), remaining_seconds
+                )
             if not completed:
                 timed_out = True
-                await self.manager.timeout_tasks(set(targets))
+                if self.config.system.task_execution_mode != "sequential":
+                    await self.manager.timeout_tasks(set(targets))
         finally:
-            stop_event.set()
-            await monitor_task
-            await self.manager.shutdown()
-            lease.release()
+            try:
+                stop_event.set()
+                await monitor_task
+                await self.manager.shutdown()
+            finally:
+                mute_controller.restore()
+                lease.release()
 
         elapsed = int((datetime.now(tz=timezone.utc) - started_at).total_seconds())
         results = [self.manager.get_task_result(name) for name in targets]
@@ -180,7 +214,11 @@ class AutomationRunner:
                     str(result["state"]),
                 )
                 duration = self._format_duration(float(result["elapsed_seconds"]))
-                summary_section.append(f"- {name}：{state}（用时 {duration}）")
+                error_count = self._count_error_lines(result.get("lines", ()))
+                error_suffix = f"，有 {error_count} 个 [ERR]" if error_count else ""
+                summary_section.append(
+                    f"- {name}：{state}（用时 {duration}{error_suffix}）"
+                )
             elif self.config.tasks[name].enabled:
                 summary_section.append(f"- {name}：冷却中")
             else:
@@ -216,6 +254,14 @@ class AutomationRunner:
         rounded_seconds = max(0, int(round(seconds)))
         minutes, remaining_seconds = divmod(rounded_seconds, 60)
         return f"{minutes} 分 {remaining_seconds} 秒"
+
+    @staticmethod
+    def _count_error_lines(lines: object) -> int:
+        """统计业务报告中的可预期子任务错误。"""
+
+        if not isinstance(lines, (list, tuple)):
+            return 0
+        return sum(str(line).startswith("[ERR]") for line in lines)
 
 
 async def run_automation(

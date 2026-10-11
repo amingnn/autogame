@@ -36,7 +36,10 @@ def run_sign_in(
     for token in tokens:
         try:
             client_messages = SkylandClient(token).sign_all()
-            messages.extend(client_messages or ["当前账号没有可签到角色"])
+            normalized_messages = client_messages or ["当前账号没有可签到角色"]
+            messages.extend(normalized_messages)
+            if any("签到失败" in message for message in normalized_messages):
+                success = False
             valid_tokens.append(token)
         except SkylandAuthenticationError:
             expired_tokens += 1
@@ -64,9 +67,12 @@ def run_sign_in(
             account.password.get_secret_value(),
         )
         refreshed_messages = refreshed_client.sign_all()
-        messages.extend(refreshed_messages or ["当前账号没有可签到角色"])
+        normalized_messages = refreshed_messages or ["当前账号没有可签到角色"]
+        messages.extend(normalized_messages)
+        if any("签到失败" in message for message in normalized_messages):
+            success = False
         token_store.save([*valid_tokens, refreshed_client.passport_token])
-        return SignInResult(True, tuple(messages))
+        return SignInResult(success, tuple(messages))
     except Exception as exc:
         message = f"森空岛 Token 刷新或签到失败：{exc}"
         messages.append(message)

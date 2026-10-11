@@ -6,7 +6,8 @@ import asyncio
 from pathlib import Path
 
 from autogame.config import SkylandAccountConfig
-from autogame.tasks.base import AdapterResult, StartResult, TaskContext
+from autogame.logger import get_task_logger
+from autogame.tasks.core.base import AdapterResult, StartResult, TaskContext
 from autogame.tasks.skyland_sign.service import run_sign_in
 from autogame.tasks.skyland_sign.token_store import TokenStore
 
@@ -34,6 +35,14 @@ class SkylandSignAdapter:
             self._account,
         )
         report_lines = tuple(result.messages)
+        task_log = get_task_logger(context.task_name)
+        for line in report_lines:
+            task_log.info("{}", line)
+        task_log.info(
+            "森空岛签到业务结果：{}（共 {} 条角色结果）",
+            "成功" if result.success else "失败",
+            len(report_lines),
+        )
         if result.success:
             return StartResult(
                 None,

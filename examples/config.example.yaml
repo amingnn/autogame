@@ -1,8 +1,10 @@
 system:
   log_level: "INFO"
   automation_timeout_minutes: 90  # 自动化会话超时（分钟）
+  task_execution_mode: "parallel" # parallel 并行 / sequential 串行
   completion_action: "sleep"      # sleep / shutdown / hibernate / none
   completion_action_delay_seconds: 60
+  mute_during_automation: true    # 自动化运行期间静音，结束或超时后恢复
   server_chan_enabled: false
   server_chan_key: "your_key_here"
 

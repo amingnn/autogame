@@ -103,8 +103,10 @@ class ConfigStore:
         allowed = {
             "log_level",
             "automation_timeout_minutes",
+            "task_execution_mode",
             "completion_action",
             "completion_action_delay_seconds",
+            "mute_during_automation",
             "server_chan_enabled",
             "server_chan_key",
         }

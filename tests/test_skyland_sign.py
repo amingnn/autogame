@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -16,7 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from autogame.config import Config, SkylandAccountConfig
+from autogame.config import Config, SkylandAccountConfig, TaskConfig
 from autogame.tasks.skyland_sign.client import (
     CRED_CODE_URL,
     GRANT_CODE_URL,
@@ -26,6 +28,9 @@ from autogame.tasks.skyland_sign.client import (
 )
 from autogame.tasks.skyland_sign.service import run_sign_in
 from autogame.tasks.skyland_sign.token_store import TokenStore
+from autogame.tasks.skyland_sign.adapter import SkylandSignAdapter
+from autogame.tasks.skyland_sign.service import SignInResult
+from autogame.tasks.core.base import TaskContext
 
 
 class _Response:
@@ -338,6 +343,43 @@ class SkylandSignTests(unittest.TestCase):
 
         self.assertFalse(result.success)
         self.assertIn("phone 和 password", result.messages[0])
+
+    def test_adapter_writes_success_and_duplicate_results_to_task_log(self) -> None:
+        result = SignInResult(
+            True,
+            ("[明日方舟]角色测试(官服)今日已签到", "[终末地]角色测试今日签到成功"),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            context = TaskContext(
+                "skyland_sign",
+                TaskConfig(enabled=True),
+                datetime.now(timezone.utc),
+            )
+            with (
+                patch(
+                    "autogame.tasks.skyland_sign.adapter.run_sign_in",
+                    return_value=result,
+                ),
+                patch(
+                    "autogame.tasks.skyland_sign.adapter.get_task_logger"
+                ) as get_logger,
+            ):
+                outcome = asyncio.run(
+                    SkylandSignAdapter(Path(directory) / "token.txt").start(context)
+                )
+
+        self.assertEqual(outcome.result.state, "completed")
+        get_logger.return_value.info.assert_any_call("{}", result.messages[0])
+        get_logger.return_value.info.assert_any_call("{}", result.messages[1])
+        self._print_business_result(
+            "森空岛任务日志结果",
+            [
+                f"成功结果：{result.messages[1]}",
+                f"重复签到结果：{result.messages[0]}",
+                "结果：成功与今日已签到均写入 skyland_sign 任务日志",
+            ],
+        )
 
 
 if __name__ == "__main__":

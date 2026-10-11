@@ -42,6 +42,8 @@
         </div>
       </aside>
 
+      <div class="pane-resizer pane-resizer-sidebar" data-pane-resizer="sidebar" role="separator" aria-orientation="vertical" aria-label="调整任务列表宽度" tabindex="0"></div>
+
       <div class="main-column">
         <main class="workspace">
 
@@ -54,6 +56,8 @@
           </div>
           <div id="detailContent" class="detail-content detail-empty">请从左侧选择一个任务</div>
         </section>
+
+        <div class="pane-resizer pane-resizer-logs" data-pane-resizer="logs" role="separator" aria-orientation="vertical" aria-label="调整日志栏宽度" tabindex="0"></div>
 
         <aside class="logs-panel panel" id="logsSection">
           <div class="panel-header">
@@ -99,8 +103,10 @@
           <div class="settings-form">
             <div class="detail-field"><label>日志级别</label><select id="systemLogLevel"><option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
             <div class="detail-field"><label>超时时间（分钟）</label><input id="systemTimeout" type="number" min="1" step="1"></div>
+            <div class="detail-field"><label>任务执行顺序</label><select id="systemTaskExecutionMode"><option value="parallel">并行</option><option value="sequential">串行（节省内存）</option></select></div>
             <div class="detail-field"><label>完成后动作</label><select id="systemCompletionAction"><option value="none">不执行</option><option value="sleep">睡眠</option><option value="hibernate">休眠</option><option value="shutdown">关机</option></select></div>
             <div class="detail-field"><label>完成动作延时（秒）</label><input id="systemDelay" type="number" min="0"></div>
+            <label class="check-field"><input id="systemMuteDuringAutomation" type="checkbox"> <span>自动化运行时静音</span></label>
             <label class="check-field"><input id="systemServerChanEnabled" type="checkbox"> <span>发送 Server 酱通知</span><span class="field-help" tabindex="0" title="仅在全部运行时生效" aria-label="仅在全部运行时生效">?</span></label>
             <div class="detail-field full-field"><label>Server 酱 Key</label><div class="secret-input-wrap"><input id="systemSendKey" type="password" autocomplete="new-password" placeholder="未配置"><button class="field-icon-button" id="toggleServerKey" type="button" title="显示 Server 酱 Key" aria-label="显示 Server 酱 Key"></button></div></div>
           </div>
